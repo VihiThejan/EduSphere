@@ -70,7 +70,25 @@ VITE_API_URL=http://localhost:5000/api/v1
 VITE_APP_NAME=EduSphere
 ```
 
-### 4. Start development servers
+### 4. Build shared package
+
+```bash
+npm run build --workspace=shared
+```
+
+### 5. (Optional) Seed the database with sample data
+
+```bash
+cd packages/server
+npm run seed
+```
+
+This creates sample users, courses, and lessons for development:
+- **Admin**: admin@edusphere.com / Test1234
+- **Tutor**: john.tutor@edusphere.com / Test1234
+- **Student**: mike.student@edusphere.com / Test1234
+
+### 6. Start development servers
 
 ```bash
 # Start both frontend and backend
@@ -81,6 +99,8 @@ npm run dev:server  # Backend on http://localhost:5000
 npm run dev:client  # Frontend on http://localhost:5173
 ```
 
+For detailed setup instructions, see **[SETUP.md](SETUP.md)**
+
 ## Available Scripts
 
 - `npm run dev` - Start both client and server in development mode
@@ -90,6 +110,22 @@ npm run dev:client  # Frontend on http://localhost:5173
 - `npm run test` - Run tests in all packages
 - `npm run lint` - Lint all packages
 - `npm run format` - Format code with Prettier
+- `npm run seed` - Seed database with sample data (from packages/server)
+
+## Documentation
+
+Comprehensive guides are available for different aspects of development:
+
+- **[SETUP.md](SETUP.md)** - Detailed setup instructions and troubleshooting
+- **[API.md](API.md)** - Complete API endpoint documentation with examples
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and workflow
+- **[QUICKREF.md](QUICKREF.md)** - Quick reference cheatsheet for common commands
+
+**Quick Links:**
+- Need help getting started? → [SETUP.md](SETUP.md)
+- Want to test the API? → [API.md](API.md)
+- Contributing code? → [CONTRIBUTING.md](CONTRIBUTING.md)
+- Looking for commands? → [QUICKREF.md](QUICKREF.md)
 
 ## Development Phases
 
@@ -114,26 +150,41 @@ npm run dev:client  # Frontend on http://localhost:5173
 
 ## API Documentation
 
-API endpoints are available at `http://localhost:5000/api/v1`
+The backend API is available at `http://localhost:5000/api/v1`
 
-### Authentication
+**Complete API documentation with request/response examples is available in [API.md](API.md)**
+
+### Quick Overview
+
+**Authentication:**
 - `POST /auth/register` - Register new user
 - `POST /auth/login` - Login user
 - `POST /auth/refresh` - Refresh access token
 - `POST /auth/logout` - Logout user
 - `GET /auth/me` - Get current user
 
-### Courses
-- `GET /courses` - List all courses
+**Courses:**
+- `GET /courses` - List all courses (with filters, search, pagination)
 - `GET /courses/:id` - Get course details
 - `POST /courses` - Create course (tutor only)
 - `PUT /courses/:id` - Update course (owner only)
 - `DELETE /courses/:id` - Delete course (owner only)
+- `GET /courses/:id/lessons` - Get course lessons
+- `POST /courses/:id/lessons` - Add lesson to course
 
-### Enrollments
-- `POST /courses/:id/enroll` - Enroll in course
+**Enrollments:**
+- `POST /enrollments/courses/:id/enroll` - Enroll in course
 - `GET /enrollments/me` - Get user's enrollments
-- `GET /courses/:id/progress` - Get course progress
+- `GET /enrollments/courses/:id/progress` - Get course progress
+- `POST /enrollments/courses/:id/lessons/:lessonId/complete` - Mark lesson complete
+
+**Videos:**
+- `POST /videos/upload` - Upload video (tutor only)
+- `GET /videos/:id` - Get video metadata
+- `GET /videos/:id/stream` - Stream video with range support
+- `DELETE /videos/:id` - Delete video (owner only)
+
+For detailed examples and request/response formats, see **[API.md](API.md)**
 
 ## Team
 
@@ -149,4 +200,31 @@ MIT License - See LICENSE file for details
 
 ## Contributing
 
-This is a university project. Please coordinate with team members before making changes.
+We welcome contributions from team members! Please follow these guidelines:
+
+1. **Check existing documentation**:
+   - [SETUP.md](SETUP.md) for environment setup
+   - [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution workflow
+   - [QUICKREF.md](QUICKREF.md) for quick command reference
+
+2. **Create a feature branch**:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+3. **Follow code standards**:
+   - Use TypeScript strict mode
+   - Follow existing code patterns
+   - Run `npm run lint` and `npm run format`
+   - Write tests for new features
+
+4. **Commit with conventional format**:
+   ```bash
+   git commit -m "feat(scope): description"
+   ```
+
+5. **Submit a pull request** with clear description
+
+For detailed guidelines, see **[CONTRIBUTING.md](CONTRIBUTING.md)**
+
+This is a university project. Please coordinate with team members before making major changes.
