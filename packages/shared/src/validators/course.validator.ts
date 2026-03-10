@@ -39,7 +39,3 @@ export const courseFilterSchema = z.object({
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(10),
 });
-
-export type CourseCreateInput = z.infer<typeof courseCreateSchema>;
-export type CourseUpdateInput = z.infer<typeof courseUpdateSchema>;
-export type CourseFilterInput = z.infer<typeof courseFilterSchema>;

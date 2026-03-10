@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_ROLES, ROLES_ARRAY } from '../constants/roles';
+import { USER_ROLES } from '../constants/roles';
 
 export const userProfileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(50),
@@ -30,7 +30,3 @@ export const userUpdateSchema = z.object({
   profile: userProfileSchema.partial().optional(),
   email: z.string().email().optional(),
 });
-
-export type UserRegisterInput = z.infer<typeof userRegisterSchema>;
-export type UserLoginInput = z.infer<typeof userLoginSchema>;
-export type UserUpdateInput = z.infer<typeof userUpdateSchema>;

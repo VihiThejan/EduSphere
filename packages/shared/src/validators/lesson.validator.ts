@@ -17,6 +17,3 @@ export const lessonUpdateSchema = z.object({
   content: z.string().max(10000).optional(),
   isFree: z.boolean().optional(),
 });
-
-export type LessonCreateInput = z.infer<typeof lessonCreateSchema>;
-export type LessonUpdateInput = z.infer<typeof lessonUpdateSchema>;
