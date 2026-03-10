@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { config } from '../config';
+import { config } from '../../config';
 import { ApiResponse } from '@edusphere/shared';
 
 class ApiClient {

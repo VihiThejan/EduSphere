@@ -17,7 +17,7 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface UserCreateInput {
+export interface UserRegisterInput {
   email: string;
   password: string;
   firstName: string;
