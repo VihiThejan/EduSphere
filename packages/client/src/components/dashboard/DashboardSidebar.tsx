@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Flame } from 'lucide-react';
 import { DashboardNavItem } from './types';
 
@@ -18,20 +19,24 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       <nav className="flex-1 space-y-1 p-4">
         {primaryItems.map((item) => {
           const Icon = item.icon;
+          const className = item.active
+            ? 'flex items-center gap-3 rounded-lg bg-primary-900 px-3 py-2 text-sm font-medium text-white'
+            : 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-900/5 hover:text-primary-900';
+
+          if (item.href.startsWith('#')) {
+            return (
+              <a key={item.label} href={item.href} className={className}>
+                <Icon size={16} />
+                {item.label}
+              </a>
+            );
+          }
 
           return (
-            <a
-              key={item.label}
-              href={item.href}
-              className={
-                item.active
-                  ? 'flex items-center gap-3 rounded-lg bg-primary-900 px-3 py-2 text-sm font-medium text-white'
-                  : 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-900/5 hover:text-primary-900'
-              }
-            >
+            <Link key={item.label} to={item.href} className={className}>
               <Icon size={16} />
               {item.label}
-            </a>
+            </Link>
           );
         })}
 
@@ -39,16 +44,22 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
         {secondaryItems.map((item) => {
           const Icon = item.icon;
+          const className = 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-900/5 hover:text-primary-900';
+
+          if (item.href.startsWith('#')) {
+            return (
+              <a key={item.label} href={item.href} className={className}>
+                <Icon size={16} />
+                {item.label}
+              </a>
+            );
+          }
 
           return (
-            <a
-              key={item.label}
-              href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-900/5 hover:text-primary-900"
-            >
+            <Link key={item.label} to={item.href} className={className}>
               <Icon size={16} />
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>

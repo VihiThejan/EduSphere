@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { LearningCourse } from './types';
 
 interface ContinueLearningSectionProps {
@@ -18,7 +19,7 @@ const ContinueLearningSection: React.FC<ContinueLearningSectionProps> = ({ cours
       <div className="space-y-4">
         {courses.map((course) => (
           <article
-            key={course.title}
+            key={course.id}
             className="flex flex-col gap-4 rounded-xl border border-primary-900/10 bg-white p-4 sm:flex-row sm:items-center"
           >
             <img
@@ -30,7 +31,7 @@ const ContinueLearningSection: React.FC<ContinueLearningSectionProps> = ({ cours
             <div className="flex-1">
               <div className="flex items-center justify-between gap-3">
                 <span className="rounded bg-primary-900/10 px-2 py-0.5 text-xs font-medium text-primary-900">
-                  {course.category}
+                  {course.badgeLabel}
                 </span>
                 <span className="text-xs text-slate-400">{course.progressLabel}</span>
               </div>
@@ -45,12 +46,12 @@ const ContinueLearningSection: React.FC<ContinueLearningSectionProps> = ({ cours
               </div>
             </div>
 
-            <button
-              type="button"
+            <Link
+              to={`/courses/${course.id}`}
               className="rounded-lg border border-primary-900 px-4 py-2 text-sm font-semibold text-primary-900 transition hover:bg-primary-900/5"
             >
               Resume
-            </button>
+            </Link>
           </article>
         ))}
       </div>

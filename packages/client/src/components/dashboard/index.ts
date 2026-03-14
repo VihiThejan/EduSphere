@@ -3,4 +3,4 @@ export { default as DashboardHeader } from './DashboardHeader';
 export { default as DashboardSidebar } from './DashboardSidebar';
 export { default as KuppiSessionsPanel } from './KuppiSessionsPanel';
 export { default as StatsGrid } from './StatsGrid';
-export type { DashboardNavItem, DashboardStat, KuppiSession, LearningCourse } from './types';
+export type { DashboardNavItem, DashboardRecommendation, DashboardStat, LearningCourse } from './types';

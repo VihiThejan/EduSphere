@@ -3,7 +3,6 @@ import {
   Activity,
   BarChart3,
   BookOpen,
-  BookText,
   ClipboardList,
   Clock3,
   LayoutDashboard,
@@ -13,23 +12,57 @@ import {
   ShoppingBag,
   TrendingUp,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
 import StatsGrid from '@/components/dashboard/StatsGrid';
-import { DashboardNavItem, DashboardStat, KuppiSession, LearningCourse } from '@/components/dashboard/types';
+import {
+  DashboardNavItem,
+  DashboardRecommendation,
+  DashboardStat,
+  LearningCourse,
+} from '@/components/dashboard/types';
+import { dashboardApi } from '@/services/api/dashboard.api';
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuthStore();
 
-  const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Alex Thompson';
+  const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Student';
+  const avatarUrl = user?.profile.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80';
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['student-dashboard', user?._id],
+    queryFn: dashboardApi.getStudentDashboardData,
+    enabled: !!user?._id,
+  });
+
+  const activeEnrollments = data?.enrollments ?? [];
+  const recommendedCourses = data?.recommendedCourses ?? [];
+
+  const totalCompletedLessons = activeEnrollments.reduce(
+    (total, item) => total + item.completedLessons,
+    0
+  );
+  const totalRemainingLessons = activeEnrollments.reduce(
+    (total, item) => total + item.remainingLessons,
+    0
+  );
+  const averageProgress = activeEnrollments.length
+    ? Math.round(
+        activeEnrollments.reduce(
+          (total, item) => total + item.enrollment.progressPercentage,
+          0
+        ) / activeEnrollments.length
+      )
+    : 0;
 
   const primaryItems: DashboardNavItem[] = [
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '#', icon: BookText },
+    { label: 'My Learning', href: '#', icon: Clock3 },
     { label: 'Marketplace', href: '#', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
   ];
@@ -42,80 +75,62 @@ const DashboardPage: React.FC = () => {
   const stats: DashboardStat[] = [
     {
       label: 'Active Courses',
-      value: '12',
-      description: '+2 from last month',
-      descriptionClassName: 'text-green-500',
+      value: String(activeEnrollments.length),
+      description: 'Current enrolled courses',
+      descriptionClassName: 'text-slate-500',
       icon: BookOpen,
     },
     {
-      label: 'Completed Hours',
-      value: '458',
-      description: 'Total study time',
+      label: 'Completed Lessons',
+      value: String(totalCompletedLessons),
+      description: 'Lessons finished so far',
       descriptionClassName: 'text-slate-400',
       icon: Clock3,
     },
     {
-      label: 'Pending Assignments',
-      value: '3',
-      description: 'Due within 48h',
-      descriptionClassName: 'text-red-500',
+      label: 'Remaining Lessons',
+      value: String(totalRemainingLessons),
+      description: 'Still left to complete',
+      descriptionClassName: 'text-amber-600',
       icon: ClipboardList,
     },
     {
-      label: 'Avg. Performance',
-      value: '92%',
-      description: 'Top 5% of class',
+      label: 'Avg. Progress',
+      value: `${averageProgress}%`,
+      description: 'Across active courses',
       descriptionClassName: 'text-green-500',
       icon: TrendingUp,
     },
   ];
 
   const courses: LearningCourse[] = [
-    {
-      category: 'Computer Science',
-      title: 'Advanced Data Structures',
-      progressLabel: '65% Complete',
-      progressPercent: 65,
+    ...activeEnrollments.slice(0, 3).map((item) => ({
+      id: item.course._id,
+      badgeLabel: item.course.instructorName || 'Enrolled Course',
+      title: item.course.title,
+      progressLabel: `${item.enrollment.progressPercentage}% Complete`,
+      progressPercent: item.enrollment.progressPercentage,
       imageUrl:
+        item.course.thumbnail ||
         'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      category: 'Finance',
-      title: 'Microeconomics Principles',
-      progressLabel: '20% Complete',
-      progressPercent: 20,
-      imageUrl:
-        'https://images.unsplash.com/photo-1638913662252-70efce1e60a7?auto=format&fit=crop&w=800&q=80',
-    },
+    })),
   ];
 
-  const sessions: KuppiSession[] = [
-    {
-      title: 'Python for Beginners',
-      subtitle: 'by Kavindu Perera - Today, 4PM',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      title: 'Matrix Algebra Hub',
-      subtitle: 'by Sarah Jenkins - Tomorrow, 10AM',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      title: 'Operating Systems',
-      subtitle: 'by OS Group - Wed, 6PM',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1525873765963-8931ab571545?auto=format&fit=crop&w=200&q=80',
-    },
-  ];
+  const sessions: DashboardRecommendation[] = recommendedCourses.slice(0, 3).map((course) => ({
+    id: course._id,
+    title: course.title,
+    subtitle: `${course.instructorName || 'EduSphere Tutor'} - ${course.stats.totalLessons} lessons`,
+    avatarUrl:
+      course.thumbnail ||
+      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=240&q=80',
+  }));
 
   return (
     <div className="relative flex min-h-screen flex-col bg-slate-50 text-slate-900">
       <DashboardHeader
         userName={userName}
         studentId="#22941"
-        avatarUrl="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80"
+        avatarUrl={avatarUrl}
         onLogout={() => {
           void logout();
         }}
@@ -129,7 +144,9 @@ const DashboardPage: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold text-slate-900 md:text-4xl">Welcome back, {userName}!</h1>
               <p className="mt-1 text-slate-500">
-                You&apos;ve completed 75% of your weekly goals. Keep it up!
+                {activeEnrollments.length > 0
+                  ? `You are currently learning across ${activeEnrollments.length} active course${activeEnrollments.length === 1 ? '' : 's'}.`
+                  : 'Your dashboard will update as soon as you enroll in courses.'}
               </p>
             </div>
 
@@ -142,11 +159,48 @@ const DashboardPage: React.FC = () => {
             </button>
           </div>
 
-          <StatsGrid stats={stats} />
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-32 animate-pulse rounded-xl border border-primary-900/10 bg-white" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              Unable to load dashboard data right now.
+            </div>
+          ) : (
+            <StatsGrid stats={stats} />
+          )}
 
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <ContinueLearningSection courses={courses} />
-            <KuppiSessionsPanel sessions={sessions} />
+            {isLoading ? (
+              <section className="lg:col-span-2">
+                <div className="space-y-4">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="h-28 animate-pulse rounded-xl border border-primary-900/10 bg-white" />
+                  ))}
+                </div>
+              </section>
+            ) : courses.length > 0 ? (
+              <ContinueLearningSection courses={courses} />
+            ) : (
+              <section className="lg:col-span-2">
+                <div className="rounded-xl border border-primary-900/10 bg-white p-6">
+                  <h3 className="text-lg font-bold text-slate-900">Continue Learning</h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    You have no active enrollments yet. Browse courses to start learning.
+                  </p>
+                </div>
+              </section>
+            )}
+
+            <KuppiSessionsPanel
+              title="Recommended Courses"
+              description="Published courses you can explore next"
+              browseLabel="Browse All Courses"
+              sessions={sessions}
+            />
           </div>
 
           <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-4 lg:hidden">

@@ -16,14 +16,16 @@ export interface DashboardStat {
 }
 
 export interface LearningCourse {
-  category: string;
+  id: string;
+  badgeLabel: string;
   title: string;
   progressLabel: string;
   progressPercent: number;
   imageUrl: string;
 }
 
-export interface KuppiSession {
+export interface DashboardRecommendation {
+  id: string;
   title: string;
   subtitle: string;
   avatarUrl: string;
