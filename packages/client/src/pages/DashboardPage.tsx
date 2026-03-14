@@ -13,14 +13,12 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
 import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
 import StatsGrid from '@/components/dashboard/StatsGrid';
 import {
-  DashboardNavItem,
   DashboardRecommendation,
   DashboardStat,
   LearningCourse,
@@ -28,7 +26,8 @@ import {
 import { dashboardApi } from '@/services/api/dashboard.api';
 
 const DashboardPage: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
+  const [search, setSearch] = React.useState('');
 
   const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Student';
   const avatarUrl = user?.profile.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80';
@@ -36,7 +35,7 @@ const DashboardPage: React.FC = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['student-dashboard', user?._id],
     queryFn: dashboardApi.getStudentDashboardData,
-    enabled: !!user?._id,
+    enabled: true,
   });
 
   const activeEnrollments = data?.enrollments ?? [];
@@ -59,7 +58,14 @@ const DashboardPage: React.FC = () => {
       )
     : 0;
 
-  const primaryItems: DashboardNavItem[] = [
+  const headerItems: AppNavItem[] = [
+    { label: 'Courses', href: '/courses' },
+    { label: 'Kuppi', href: '/courses' },
+    { label: 'Faculties', href: '/courses' },
+    { label: 'My Learning', href: '/dashboard', active: true },
+  ];
+
+  const primaryItems: AppNavItem[] = [
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
     { label: 'My Learning', href: '#', icon: Clock3 },
@@ -67,7 +73,7 @@ const DashboardPage: React.FC = () => {
     { label: 'Listings', href: '#', icon: ListChecks },
   ];
 
-  const secondaryItems: DashboardNavItem[] = [
+  const secondaryItems: AppNavItem[] = [
     { label: 'Analytics', href: '#', icon: BarChart3 },
     { label: 'Settings', href: '#', icon: Settings },
   ];
@@ -127,9 +133,14 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <DashboardHeader
+      <AppHeader
+        navItems={headerItems}
+        search={search}
+        searchPlaceholder="Search courses, tutors, or sessions..."
+        onSearchChange={setSearch}
+        isAuthenticated={isAuthenticated}
         userName={userName}
-        studentId="#22941"
+        userMeta="Student ID: #22941"
         avatarUrl={avatarUrl}
         onLogout={() => {
           void logout();
@@ -137,7 +148,7 @@ const DashboardPage: React.FC = () => {
       />
 
       <div className="flex flex-1">
-        <DashboardSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
+        <AppSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -212,6 +223,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      <AppFooter />
     </div>
   );
 };
