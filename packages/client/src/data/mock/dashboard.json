@@ -1,0 +1,59 @@
+{
+  "enrollments": [
+    {
+      "enrollment": {
+        "_id": "e1",
+        "status": "active",
+        "enrolledAt": "2026-02-10T08:00:00.000Z",
+        "progressPercentage": 67,
+        "lastAccessedAt": "2026-03-14T08:00:00.000Z"
+      },
+      "course": {
+        "_id": "c1",
+        "title": "Full-Stack Web Development with MERN Stack",
+        "thumbnail": "https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&w=900&q=80",
+        "instructorName": "John Smith",
+        "totalLessons": 9
+      },
+      "completedLessons": 6,
+      "remainingLessons": 3
+    },
+    {
+      "enrollment": {
+        "_id": "e2",
+        "status": "active",
+        "enrolledAt": "2026-02-14T08:00:00.000Z",
+        "progressPercentage": 80,
+        "lastAccessedAt": "2026-03-13T08:00:00.000Z"
+      },
+      "course": {
+        "_id": "c2",
+        "title": "Introduction to Python Programming",
+        "thumbnail": "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=900&q=80",
+        "instructorName": "Sarah Johnson",
+        "totalLessons": 8
+      },
+      "completedLessons": 6,
+      "remainingLessons": 2
+    },
+    {
+      "enrollment": {
+        "_id": "e3",
+        "status": "active",
+        "enrolledAt": "2026-02-20T08:00:00.000Z",
+        "progressPercentage": 29,
+        "lastAccessedAt": "2026-03-12T08:00:00.000Z"
+      },
+      "course": {
+        "_id": "c5",
+        "title": "Machine Learning Fundamentals",
+        "thumbnail": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=900&q=80",
+        "instructorName": "Sarah Johnson",
+        "totalLessons": 7
+      },
+      "completedLessons": 2,
+      "remainingLessons": 5
+    }
+  ],
+  "recommendedCourses": ["c3", "c4", "c6"]
+}

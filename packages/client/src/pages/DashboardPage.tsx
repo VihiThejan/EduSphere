@@ -26,7 +26,7 @@ import {
 import { dashboardApi } from '@/services/api/dashboard.api';
 
 const DashboardPage: React.FC = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const [search, setSearch] = React.useState('');
 
   const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Student';
@@ -35,7 +35,7 @@ const DashboardPage: React.FC = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['student-dashboard', user?._id],
     queryFn: dashboardApi.getStudentDashboardData,
-    enabled: !!user?._id,
+    enabled: true,
   });
 
   const activeEnrollments = data?.enrollments ?? [];
@@ -138,7 +138,7 @@ const DashboardPage: React.FC = () => {
         search={search}
         searchPlaceholder="Search courses, tutors, or sessions..."
         onSearchChange={setSearch}
-        isAuthenticated={true}
+        isAuthenticated={isAuthenticated}
         userName={userName}
         userMeta="Student ID: #22941"
         avatarUrl={avatarUrl}

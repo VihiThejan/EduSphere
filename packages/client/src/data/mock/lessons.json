@@ -1,0 +1,28 @@
+{
+  "c1": [
+    { "_id": "l1", "courseId": "c1", "title": "Course Overview", "description": "What you will build", "order": 1, "duration": 540, "isFree": true, "createdAt": "2026-01-10T10:00:00.000Z", "updatedAt": "2026-01-10T10:00:00.000Z" },
+    { "_id": "l2", "courseId": "c1", "title": "Dev Environment Setup", "description": "Tools and setup", "order": 2, "duration": 1080, "isFree": false, "createdAt": "2026-01-10T10:00:00.000Z", "updatedAt": "2026-01-10T10:00:00.000Z" },
+    { "_id": "l3", "courseId": "c1", "title": "Express API Basics", "description": "Routes and middleware", "order": 3, "duration": 1800, "isFree": false, "createdAt": "2026-01-10T10:00:00.000Z", "updatedAt": "2026-01-10T10:00:00.000Z" }
+  ],
+  "c2": [
+    { "_id": "l10", "courseId": "c2", "title": "Python Setup", "description": "Install and run Python", "order": 1, "duration": 600, "isFree": true, "createdAt": "2026-01-15T10:00:00.000Z", "updatedAt": "2026-01-15T10:00:00.000Z" },
+    { "_id": "l11", "courseId": "c2", "title": "Variables and Types", "description": "Core types", "order": 2, "duration": 900, "isFree": false, "createdAt": "2026-01-15T10:00:00.000Z", "updatedAt": "2026-01-15T10:00:00.000Z" },
+    { "_id": "l12", "courseId": "c2", "title": "Control Flow", "description": "if/else and loops", "order": 3, "duration": 1200, "isFree": false, "createdAt": "2026-01-15T10:00:00.000Z", "updatedAt": "2026-01-15T10:00:00.000Z" }
+  ],
+  "c3": [
+    { "_id": "l18", "courseId": "c3", "title": "Advanced Hooks", "description": "Custom hooks and reducers", "order": 1, "duration": 2100, "isFree": true, "createdAt": "2026-01-20T10:00:00.000Z", "updatedAt": "2026-01-20T10:00:00.000Z" },
+    { "_id": "l19", "courseId": "c3", "title": "Render Performance", "description": "Memoization techniques", "order": 2, "duration": 1800, "isFree": false, "createdAt": "2026-01-20T10:00:00.000Z", "updatedAt": "2026-01-20T10:00:00.000Z" }
+  ],
+  "c4": [
+    { "_id": "l25", "courseId": "c4", "title": "Limits and Continuity", "description": "Foundations", "order": 1, "duration": 1800, "isFree": true, "createdAt": "2026-01-22T10:00:00.000Z", "updatedAt": "2026-01-22T10:00:00.000Z" },
+    { "_id": "l26", "courseId": "c4", "title": "Derivatives", "description": "Rules and applications", "order": 2, "duration": 2100, "isFree": false, "createdAt": "2026-01-22T10:00:00.000Z", "updatedAt": "2026-01-22T10:00:00.000Z" }
+  ],
+  "c5": [
+    { "_id": "l32", "courseId": "c5", "title": "ML Workflow", "description": "End-to-end process", "order": 1, "duration": 1200, "isFree": true, "createdAt": "2026-01-25T10:00:00.000Z", "updatedAt": "2026-01-25T10:00:00.000Z" },
+    { "_id": "l33", "courseId": "c5", "title": "Data Preprocessing", "description": "Cleaning data", "order": 2, "duration": 2100, "isFree": false, "createdAt": "2026-01-25T10:00:00.000Z", "updatedAt": "2026-01-25T10:00:00.000Z" }
+  ],
+  "c6": [
+    { "_id": "l39", "courseId": "c6", "title": "Economic Thinking", "description": "Core principles", "order": 1, "duration": 900, "isFree": true, "createdAt": "2026-02-01T10:00:00.000Z", "updatedAt": "2026-02-01T10:00:00.000Z" },
+    { "_id": "l40", "courseId": "c6", "title": "Supply and Demand", "description": "Market dynamics", "order": 2, "duration": 1500, "isFree": false, "createdAt": "2026-02-01T10:00:00.000Z", "updatedAt": "2026-02-01T10:00:00.000Z" }
+  ]
+}
