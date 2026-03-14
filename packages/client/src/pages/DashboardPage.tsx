@@ -1,119 +1,216 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import {
+  Activity,
+  BarChart3,
+  BookOpen,
+  ClipboardList,
+  Clock3,
+  LayoutDashboard,
+  ListChecks,
+  Plus,
+  Settings,
+  ShoppingBag,
+  TrendingUp,
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { USER_ROLES } from '@edusphere/shared';
+import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
+import StatsGrid from '@/components/dashboard/StatsGrid';
+import {
+  DashboardNavItem,
+  DashboardRecommendation,
+  DashboardStat,
+  LearningCourse,
+} from '@/components/dashboard/types';
+import { dashboardApi } from '@/services/api/dashboard.api';
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuthStore();
 
-  const isStudent = user?.roles.includes(USER_ROLES.STUDENT);
-  const isTutor = user?.roles.includes(USER_ROLES.TUTOR);
+  const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Student';
+  const avatarUrl = user?.profile.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80';
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['student-dashboard', user?._id],
+    queryFn: dashboardApi.getStudentDashboardData,
+    enabled: !!user?._id,
+  });
+
+  const activeEnrollments = data?.enrollments ?? [];
+  const recommendedCourses = data?.recommendedCourses ?? [];
+
+  const totalCompletedLessons = activeEnrollments.reduce(
+    (total, item) => total + item.completedLessons,
+    0
+  );
+  const totalRemainingLessons = activeEnrollments.reduce(
+    (total, item) => total + item.remainingLessons,
+    0
+  );
+  const averageProgress = activeEnrollments.length
+    ? Math.round(
+        activeEnrollments.reduce(
+          (total, item) => total + item.enrollment.progressPercentage,
+          0
+        ) / activeEnrollments.length
+      )
+    : 0;
+
+  const primaryItems: DashboardNavItem[] = [
+    { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
+    { label: 'Courses', href: '/courses', icon: BookOpen },
+    { label: 'My Learning', href: '#', icon: Clock3 },
+    { label: 'Marketplace', href: '#', icon: ShoppingBag },
+    { label: 'Listings', href: '#', icon: ListChecks },
+  ];
+
+  const secondaryItems: DashboardNavItem[] = [
+    { label: 'Analytics', href: '#', icon: BarChart3 },
+    { label: 'Settings', href: '#', icon: Settings },
+  ];
+
+  const stats: DashboardStat[] = [
+    {
+      label: 'Active Courses',
+      value: String(activeEnrollments.length),
+      description: 'Current enrolled courses',
+      descriptionClassName: 'text-slate-500',
+      icon: BookOpen,
+    },
+    {
+      label: 'Completed Lessons',
+      value: String(totalCompletedLessons),
+      description: 'Lessons finished so far',
+      descriptionClassName: 'text-slate-400',
+      icon: Clock3,
+    },
+    {
+      label: 'Remaining Lessons',
+      value: String(totalRemainingLessons),
+      description: 'Still left to complete',
+      descriptionClassName: 'text-amber-600',
+      icon: ClipboardList,
+    },
+    {
+      label: 'Avg. Progress',
+      value: `${averageProgress}%`,
+      description: 'Across active courses',
+      descriptionClassName: 'text-green-500',
+      icon: TrendingUp,
+    },
+  ];
+
+  const courses: LearningCourse[] = [
+    ...activeEnrollments.slice(0, 3).map((item) => ({
+      id: item.course._id,
+      badgeLabel: item.course.instructorName || 'Enrolled Course',
+      title: item.course.title,
+      progressLabel: `${item.enrollment.progressPercentage}% Complete`,
+      progressPercent: item.enrollment.progressPercentage,
+      imageUrl:
+        item.course.thumbnail ||
+        'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
+    })),
+  ];
+
+  const sessions: DashboardRecommendation[] = recommendedCourses.slice(0, 3).map((course) => ({
+    id: course._id,
+    title: course.title,
+    subtitle: `${course.instructorName || 'EduSphere Tutor'} - ${course.stats.totalLessons} lessons`,
+    avatarUrl:
+      course.thumbnail ||
+      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=240&q=80',
+  }));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/" className="text-2xl font-bold text-primary-600">
-                EduSphere
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/courses"
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Browse Courses
-              </Link>
-              <Link
-                to="/dashboard"
-                className="text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={() => logout()}
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="relative flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <DashboardHeader
+        userName={userName}
+        studentId="#22941"
+        avatarUrl={avatarUrl}
+        onLogout={() => {
+          void logout();
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user?.profile.firstName}!
-          </h1>
-          <p className="mt-2 text-gray-600">
-            {user?.roles.map((role) => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
-          </p>
-        </div>
+      <div className="flex flex-1">
+        <DashboardSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {isStudent && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Enrollments</h2>
-              <p className="text-gray-600 mb-4">
-                Track your enrolled courses and continue learning.
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
+          <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 md:text-4xl">Welcome back, {userName}!</h1>
+              <p className="mt-1 text-slate-500">
+                {activeEnrollments.length > 0
+                  ? `You are currently learning across ${activeEnrollments.length} active course${activeEnrollments.length === 1 ? '' : 's'}.`
+                  : 'Your dashboard will update as soon as you enroll in courses.'}
               </p>
-              <Link
-                to="/enrollments"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-              >
-                View Enrollments
-              </Link>
             </div>
-          )}
 
-          {isTutor && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Courses</h2>
-              <p className="text-gray-600 mb-4">Manage your courses and track student progress.</p>
-              <div className="space-x-4">
-                <Link
-                  to="/tutor/courses"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-                >
-                  My Courses
-                </Link>
-                <Link
-                  to="/tutor/courses/create"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Create Course
-                </Link>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Browse Courses</h2>
-            <p className="text-gray-600 mb-4">
-              Discover new courses and expand your knowledge.
-            </p>
-            <Link
-              to="/courses"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
             >
-              Explore Courses
-            </Link>
+              <Plus size={16} />
+              Join New Session
+            </button>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Settings</h2>
-            <p className="text-gray-600 mb-4">Update your profile and preferences.</p>
-            <Link
-              to="/settings"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Settings
-            </Link>
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-32 animate-pulse rounded-xl border border-primary-900/10 bg-white" />
+              ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              Unable to load dashboard data right now.
+            </div>
+          ) : (
+            <StatsGrid stats={stats} />
+          )}
+
+          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {isLoading ? (
+              <section className="lg:col-span-2">
+                <div className="space-y-4">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="h-28 animate-pulse rounded-xl border border-primary-900/10 bg-white" />
+                  ))}
+                </div>
+              </section>
+            ) : courses.length > 0 ? (
+              <ContinueLearningSection courses={courses} />
+            ) : (
+              <section className="lg:col-span-2">
+                <div className="rounded-xl border border-primary-900/10 bg-white p-6">
+                  <h3 className="text-lg font-bold text-slate-900">Continue Learning</h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    You have no active enrollments yet. Browse courses to start learning.
+                  </p>
+                </div>
+              </section>
+            )}
+
+            <KuppiSessionsPanel
+              title="Recommended Courses"
+              description="Published courses you can explore next"
+              browseLabel="Browse All Courses"
+              sessions={sessions}
+            />
           </div>
-        </div>
+
+          <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-4 lg:hidden">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-900">
+              <Activity size={16} />
+              Study Streak
+            </div>
+            <p className="text-lg font-bold text-slate-900">14 Days</p>
+          </div>
+        </main>
       </div>
     </div>
   );
