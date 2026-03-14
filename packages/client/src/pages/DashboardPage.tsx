@@ -1,119 +1,162 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import {
+  Activity,
+  BarChart3,
+  BookOpen,
+  BookText,
+  ClipboardList,
+  Clock3,
+  LayoutDashboard,
+  ListChecks,
+  Plus,
+  Settings,
+  ShoppingBag,
+  TrendingUp,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { USER_ROLES } from '@edusphere/shared';
+import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
+import StatsGrid from '@/components/dashboard/StatsGrid';
+import { DashboardNavItem, DashboardStat, KuppiSession, LearningCourse } from '@/components/dashboard/types';
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuthStore();
 
-  const isStudent = user?.roles.includes(USER_ROLES.STUDENT);
-  const isTutor = user?.roles.includes(USER_ROLES.TUTOR);
+  const userName = user?.profile.firstName ? `${user.profile.firstName}` : 'Alex Thompson';
+
+  const primaryItems: DashboardNavItem[] = [
+    { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
+    { label: 'Courses', href: '/courses', icon: BookOpen },
+    { label: 'My Learning', href: '#', icon: BookText },
+    { label: 'Marketplace', href: '#', icon: ShoppingBag },
+    { label: 'Listings', href: '#', icon: ListChecks },
+  ];
+
+  const secondaryItems: DashboardNavItem[] = [
+    { label: 'Analytics', href: '#', icon: BarChart3 },
+    { label: 'Settings', href: '#', icon: Settings },
+  ];
+
+  const stats: DashboardStat[] = [
+    {
+      label: 'Active Courses',
+      value: '12',
+      description: '+2 from last month',
+      descriptionClassName: 'text-green-500',
+      icon: BookOpen,
+    },
+    {
+      label: 'Completed Hours',
+      value: '458',
+      description: 'Total study time',
+      descriptionClassName: 'text-slate-400',
+      icon: Clock3,
+    },
+    {
+      label: 'Pending Assignments',
+      value: '3',
+      description: 'Due within 48h',
+      descriptionClassName: 'text-red-500',
+      icon: ClipboardList,
+    },
+    {
+      label: 'Avg. Performance',
+      value: '92%',
+      description: 'Top 5% of class',
+      descriptionClassName: 'text-green-500',
+      icon: TrendingUp,
+    },
+  ];
+
+  const courses: LearningCourse[] = [
+    {
+      category: 'Computer Science',
+      title: 'Advanced Data Structures',
+      progressLabel: '65% Complete',
+      progressPercent: 65,
+      imageUrl:
+        'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
+    },
+    {
+      category: 'Finance',
+      title: 'Microeconomics Principles',
+      progressLabel: '20% Complete',
+      progressPercent: 20,
+      imageUrl:
+        'https://images.unsplash.com/photo-1638913662252-70efce1e60a7?auto=format&fit=crop&w=800&q=80',
+    },
+  ];
+
+  const sessions: KuppiSession[] = [
+    {
+      title: 'Python for Beginners',
+      subtitle: 'by Kavindu Perera - Today, 4PM',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+    },
+    {
+      title: 'Matrix Algebra Hub',
+      subtitle: 'by Sarah Jenkins - Tomorrow, 10AM',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
+    },
+    {
+      title: 'Operating Systems',
+      subtitle: 'by OS Group - Wed, 6PM',
+      avatarUrl:
+        'https://images.unsplash.com/photo-1525873765963-8931ab571545?auto=format&fit=crop&w=200&q=80',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/" className="text-2xl font-bold text-primary-600">
-                EduSphere
-              </Link>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/courses"
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Browse Courses
-              </Link>
-              <Link
-                to="/dashboard"
-                className="text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={() => logout()}
-                className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="relative flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <DashboardHeader
+        userName={userName}
+        studentId="#22941"
+        avatarUrl="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80"
+        onLogout={() => {
+          void logout();
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user?.profile.firstName}!
-          </h1>
-          <p className="mt-2 text-gray-600">
-            {user?.roles.map((role) => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
-          </p>
-        </div>
+      <div className="flex flex-1">
+        <DashboardSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {isStudent && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Enrollments</h2>
-              <p className="text-gray-600 mb-4">
-                Track your enrolled courses and continue learning.
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
+          <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 md:text-4xl">Welcome back, {userName}!</h1>
+              <p className="mt-1 text-slate-500">
+                You&apos;ve completed 75% of your weekly goals. Keep it up!
               </p>
-              <Link
-                to="/enrollments"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-              >
-                View Enrollments
-              </Link>
             </div>
-          )}
 
-          {isTutor && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">My Courses</h2>
-              <p className="text-gray-600 mb-4">Manage your courses and track student progress.</p>
-              <div className="space-x-4">
-                <Link
-                  to="/tutor/courses"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-                >
-                  My Courses
-                </Link>
-                <Link
-                  to="/tutor/courses/create"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Create Course
-                </Link>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Browse Courses</h2>
-            <p className="text-gray-600 mb-4">
-              Discover new courses and expand your knowledge.
-            </p>
-            <Link
-              to="/courses"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
             >
-              Explore Courses
-            </Link>
+              <Plus size={16} />
+              Join New Session
+            </button>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Settings</h2>
-            <p className="text-gray-600 mb-4">Update your profile and preferences.</p>
-            <Link
-              to="/settings"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Settings
-            </Link>
+          <StatsGrid stats={stats} />
+
+          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <ContinueLearningSection courses={courses} />
+            <KuppiSessionsPanel sessions={sessions} />
           </div>
-        </div>
+
+          <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-4 lg:hidden">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-900">
+              <Activity size={16} />
+              Study Streak
+            </div>
+            <p className="text-lg font-bold text-slate-900">14 Days</p>
+          </div>
+        </main>
       </div>
     </div>
   );
