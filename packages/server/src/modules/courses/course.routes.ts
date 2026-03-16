@@ -64,6 +64,18 @@ router.delete(
 );
 
 /**
+ * @route   GET /api/v1/courses/my/courses
+ * @desc    Get all courses created by the authenticated tutor
+ * @access  Private (Tutor only)
+ */
+router.get(
+  '/my/courses',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  courseController.getTutorCourses.bind(courseController)
+);
+
+/**
  * @route   GET /api/v1/courses/:courseId/lessons
  * @desc    Get all lessons for a course
  * @access  Public (published courses) / Private (owner for drafts)

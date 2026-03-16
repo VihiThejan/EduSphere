@@ -1,10 +1,10 @@
+import mongoose from 'mongoose';
 import { CourseModel, ICourse } from './course.model.js';
 import { LessonModel, ILesson } from './lesson.model.js';
 import { UserModel } from '../users/user.model.js';
 import {
   NotFoundError,
   AuthorizationError,
-  ValidationError,
   ConflictError,
 } from '../../shared/utils/errors.js';
 import {
@@ -13,6 +13,11 @@ import {
   CourseFilters,
   COURSE_STATUS,
 } from '@edusphere/shared';
+
+interface CourseQueryParams extends CourseFilters {
+  page?: number;
+  limit?: number;
+}
 
 export class CourseService {
   async createCourse(instructorId: string, input: CourseCreateInput): Promise<ICourse> {
@@ -55,7 +60,7 @@ export class CourseService {
     return course;
   }
 
-  async getCourses(filters: CourseFilters) {
+  async getCourses(filters: CourseQueryParams) {
     const {
       category,
       level,
@@ -68,7 +73,7 @@ export class CourseService {
       limit = 10,
     } = filters;
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       status: COURSE_STATUS.PUBLISHED,
     };
 
@@ -77,9 +82,10 @@ export class CourseService {
     if (instructorId) query.instructorId = instructorId;
 
     if (minPrice !== undefined || maxPrice !== undefined) {
-      query['pricing.amount'] = {};
-      if (minPrice !== undefined) query['pricing.amount'].$gte = minPrice;
-      if (maxPrice !== undefined) query['pricing.amount'].$lte = maxPrice;
+      const priceFilter: Record<string, number> = {};
+      if (minPrice !== undefined) priceFilter.$gte = minPrice;
+      if (maxPrice !== undefined) priceFilter.$lte = maxPrice;
+      query['pricing.amount'] = priceFilter;
     }
 
     if (tags && tags.length > 0) {
@@ -213,7 +219,7 @@ export class CourseService {
     });
 
     // Update course stats
-    course.lessonIds.push(lesson._id as any);
+    course.lessonIds.push(lesson._id as mongoose.Types.ObjectId);
     course.stats.totalLessons += 1;
     course.stats.totalDuration += lesson.duration || 0;
     await course.save();
@@ -221,8 +227,12 @@ export class CourseService {
     return lesson;
   }
 
+  async getTutorCourses(instructorId: string): Promise<ICourse[]> {
+    return CourseModel.find({ instructorId }).sort({ createdAt: -1 });
+  }
+
   private async generateSlug(title: string): Promise<string> {
-    let slug = title
+    const slug = title
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, '')

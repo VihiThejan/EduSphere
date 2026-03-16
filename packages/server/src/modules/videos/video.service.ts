@@ -21,6 +21,21 @@ export class VideoService {
     return video;
   }
 
+  async createBulkVideos(files: Express.Multer.File[], userId: string): Promise<IVideo[]> {
+    const docs = files.map((file) => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      filepath: file.path,
+      mimetype: file.mimetype,
+      size: file.size,
+      uploadedBy: userId,
+      status: VIDEO_STATUS.READY,
+    }));
+
+    const videos = await VideoModel.insertMany(docs);
+    return videos as unknown as IVideo[];
+  }
+
   async getVideoById(videoId: string): Promise<IVideo> {
     const video = await VideoModel.findById(videoId);
 

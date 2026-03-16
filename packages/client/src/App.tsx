@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/courses/CoursesPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
 import HomePage from './pages/HomePage';
+import TutorUploadPage from './pages/tutor/TutorUploadPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +78,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Tutor routes */}
+          <Route
+            path="/tutor/upload"
+            element={
+              <ProtectedRoute>
+                <TutorUploadPage />
               </ProtectedRoute>
             }
           />

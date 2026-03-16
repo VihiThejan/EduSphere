@@ -7,8 +7,16 @@ import { USER_ROLES } from '@edusphere/shared';
 const router = Router();
 
 /**
+ * @route   GET /api/v1/videos/my/uploads
+ * @desc    Get current user's uploaded videos
+ * @access  Private (Tutor only)
+ * NOTE: Must be registered before /:videoId to avoid Express matching "my" as a videoId
+ */
+router.get('/my/uploads', authenticate, videoController.getUserVideos.bind(videoController));
+
+/**
  * @route   POST /api/v1/videos/upload
- * @desc    Upload a video file
+ * @desc    Upload a single video file
  * @access  Private (Tutor only)
  */
 router.post(
@@ -17,6 +25,19 @@ router.post(
   authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
   videoUpload.single('video'),
   videoController.uploadVideo.bind(videoController)
+);
+
+/**
+ * @route   POST /api/v1/videos/upload/bulk
+ * @desc    Upload multiple video files at once (max 10)
+ * @access  Private (Tutor only)
+ */
+router.post(
+  '/upload/bulk',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  videoUpload.array('videos', 10),
+  videoController.uploadBulkVideos.bind(videoController)
 );
 
 /**
@@ -39,12 +60,5 @@ router.get('/:videoId/stream', authenticate, videoController.streamVideo.bind(vi
  * @access  Private (Owner only)
  */
 router.delete('/:videoId', authenticate, videoController.deleteVideo.bind(videoController));
-
-/**
- * @route   GET /api/v1/videos/my/uploads
- * @desc    Get current user's uploaded videos
- * @access  Private (Tutor only)
- */
-router.get('/my/uploads', authenticate, videoController.getUserVideos.bind(videoController));
 
 export default router;
