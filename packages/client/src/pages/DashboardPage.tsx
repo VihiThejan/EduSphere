@@ -11,7 +11,11 @@ import {
   Settings,
   ShoppingBag,
   TrendingUp,
+  Upload,
+  BookPlus,
+  ArrowRight,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
@@ -65,12 +69,15 @@ const DashboardPage: React.FC = () => {
     { label: 'My Learning', href: '/dashboard', active: true },
   ];
 
+  const isTutor = user?.roles?.includes('tutor') || user?.roles?.includes('admin');
+
   const primaryItems: AppNavItem[] = [
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
     { label: 'My Learning', href: '#', icon: Clock3 },
     { label: 'Marketplace', href: '#', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
+    ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
   ];
 
   const secondaryItems: AppNavItem[] = [
@@ -161,13 +168,23 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
-            >
-              <Plus size={16} />
-              Join New Session
-            </button>
+            {isTutor ? (
+              <Link
+                to="/tutor/upload"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
+              >
+                <Upload size={16} />
+                Upload Course
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
+              >
+                <Plus size={16} />
+                Join New Session
+              </button>
+            )}
           </div>
 
           {isLoading ? (
@@ -213,6 +230,32 @@ const DashboardPage: React.FC = () => {
               sessions={sessions}
             />
           </div>
+
+          {/* Tutor Portal Banner — visible only to tutors */}
+          {isTutor && (
+            <div className="mt-8 rounded-xl border border-primary-900/20 bg-primary-900/5 p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-900 text-white">
+                    <BookPlus size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Tutor Portal</h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      Upload video lessons, reading materials, set pricing, and publish your courses.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/tutor/upload"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800"
+                >
+                  Upload Course Content
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-4 lg:hidden">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-900">

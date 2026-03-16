@@ -120,6 +120,22 @@ export class CourseController {
     }
   }
 
+  async getTutorCourses(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const instructorId = req.user!.userId;
+      const courses = await courseService.getTutorCourses(instructorId);
+
+      const response: ApiResponse = {
+        success: true,
+        data: { courses },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async addLesson(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { courseId } = req.params;

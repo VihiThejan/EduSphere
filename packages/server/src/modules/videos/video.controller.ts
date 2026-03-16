@@ -39,6 +39,46 @@ export class VideoController {
     }
   }
 
+  async uploadBulkVideos(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const files = req.files as Express.Multer.File[] | undefined;
+
+      if (!files || files.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'No video files provided',
+            statusCode: 400,
+          },
+        });
+        return;
+      }
+
+      const userId = req.user!.userId;
+      const videos = await videoService.createBulkVideos(files, userId);
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          videos: videos.map((v) => ({
+            videoId: v._id,
+            filename: v.filename,
+            originalName: v.originalName,
+            size: v.size,
+            status: v.status,
+          })),
+          count: videos.length,
+        },
+        message: `${videos.length} video(s) uploaded successfully`,
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getVideo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { videoId } = req.params;
