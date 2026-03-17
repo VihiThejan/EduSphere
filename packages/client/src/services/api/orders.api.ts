@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { PaymentMethod } from '@edusphere/shared';
+import { IOrder, PaymentMethod } from '@edusphere/shared';
 
 export interface CreateOrderPayload {
   paymentMethod: PaymentMethod;
@@ -27,6 +27,6 @@ export const ordersApi = {
   },
 
   getOrder: async (orderId: string): Promise<any> => {
-    return apiClient.get<any>(`/orders/${orderId}`);
+    return apiClient.get<IOrder>(`/orders/${orderId}`);
   },
 };

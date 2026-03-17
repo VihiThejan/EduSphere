@@ -43,11 +43,14 @@ router.post(
 router.get('/', marketplaceController.getListings.bind(marketplaceController));
 
 /**
- * @route   GET /api/v1/marketplace/:listingId
- * @desc    Get marketplace listing detail
+ * @route   GET /api/v1/marketplace/seller/:sellerId
+ * @desc    Get all active listings by specific seller (public view)
  * @access  Public
  */
-router.get('/:listingId', marketplaceController.getListingById.bind(marketplaceController));
+router.get(
+  '/seller/:sellerId',
+  marketplaceController.getListingsBySellerPublic.bind(marketplaceController)
+);
 
 /**
  * @route   PUT /api/v1/marketplace/:listingId
@@ -75,13 +78,10 @@ router.delete(
 );
 
 /**
- * @route   GET /api/v1/marketplace/seller/:sellerId
- * @desc    Get all active listings by specific seller (public view)
+ * @route   GET /api/v1/marketplace/:listingId
+ * @desc    Get marketplace listing detail
  * @access  Public
  */
-router.get(
-  '/seller/:sellerId',
-  marketplaceController.getListingsBySellerPublic.bind(marketplaceController)
-);
+router.get('/:listingId', marketplaceController.getListingById.bind(marketplaceController));
 
 export default router;

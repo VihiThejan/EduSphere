@@ -4,9 +4,15 @@ import { MarketplaceListingDetail } from './types';
 
 interface MarketplaceSellerPanelProps {
   listing: MarketplaceListingDetail;
+  onAddToCart?: () => void;
+  isAddingToCart?: boolean;
 }
 
-const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({ listing }) => {
+const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({
+  listing,
+  onAddToCart,
+  isAddingToCart = false,
+}) => {
   const stars = Array.from({ length: 5 }, (_, index) => index < Math.round(listing.seller.rating));
 
   return (
@@ -39,9 +45,14 @@ const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({ listing
       </div>
 
       <div className="space-y-3">
-        <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-800">
+        <button
+          type="button"
+          onClick={onAddToCart}
+          disabled={isAddingToCart}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
           <MessageSquare size={16} />
-          Contact Seller
+          {isAddingToCart ? 'Adding...' : 'Add to Cart'}
         </button>
         <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-200">
           <Heart size={16} />

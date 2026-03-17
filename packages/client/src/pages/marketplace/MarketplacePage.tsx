@@ -8,22 +8,100 @@ import {
   Settings,
   ShoppingBag,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { AppFooter, AppHeader, AppNavItem, AppSidebar } from '@/components/common';
 import {
   MarketplaceFilters,
   MarketplaceListingCard,
   MarketplacePagination,
   MarketplaceToolbar,
+  MarketplaceCampus,
+  MarketplaceCondition,
   MarketplaceFiltersState,
+  MarketplaceItemType,
   MarketplaceListing,
   MarketplaceSortValue,
 } from '@/components/marketplace';
-import listingsJson from '@/data/mock/marketplace-listings.json';
 import { useAuthStore } from '@/store/authStore';
+import { marketplaceApi } from '@/services/api/marketplace.api';
 
 const LISTINGS_PER_PAGE = 6;
-const allListings = listingsJson as unknown as MarketplaceListing[];
-const absoluteMaxPrice = Math.max(...allListings.map((listing) => listing.price));
+
+const categoryMap: Record<string, string> = {
+  Textbooks: 'textbooks',
+  Calculators: 'calculators',
+  'Laptops & Tech': 'laptops-tech',
+};
+
+const campusMap: Record<string, string> = {
+  'All Campuses': '',
+  'Colombo Campus': 'colombo',
+  'Moratuwa Campus': 'moratuwa',
+  'Peradeniya Campus': 'peradeniya',
+  'Kelaniya Campus': 'kelaniya',
+};
+
+const conditionMap: Record<string, string> = {
+  Any: '',
+  New: 'new',
+  'Used - Like New': 'used-like-new',
+  'Used - Good': 'used-good',
+};
+
+const categoryDisplayMap: Record<string, string> = {
+  textbooks: 'Textbooks',
+  calculators: 'Calculators',
+  'laptops-tech': 'Laptops & Tech',
+  'course-materials': 'Textbooks',
+  notes: 'Textbooks',
+  'lab-equipment': 'Laptops & Tech',
+  other: 'Textbooks',
+};
+
+const campusDisplayMap: Record<string, string> = {
+  colombo: 'Colombo Campus',
+  moratuwa: 'Moratuwa Campus',
+  peradeniya: 'Peradeniya Campus',
+  kelaniya: 'Kelaniya Campus',
+  other: 'Colombo Campus',
+};
+
+const conditionDisplayMap: Record<string, string> = {
+  new: 'New',
+  'used-like-new': 'Used - Like New',
+  'used-good': 'Used - Good',
+  'used-fair': 'Used - Good',
+};
+
+interface ApiListing {
+  _id: string;
+  title: string;
+  price: number;
+  campus: string;
+  category: string;
+  condition: string;
+  isNegotiable: boolean;
+  createdAt: string | Date;
+  images?: Array<{ url: string }>;
+  seller?: {
+    name?: string;
+    reviewCount?: number;
+  };
+}
+
+const mapListing = (listing: ApiListing): MarketplaceListing => ({
+  id: listing._id,
+  title: listing.title,
+  price: listing.price,
+  sellerName: listing.seller?.name || 'Seller',
+  campus: (campusDisplayMap[listing.campus] || 'Colombo Campus') as MarketplaceCampus,
+  imageUrl: listing.images?.[0]?.url || 'https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=900&q=80',
+  itemType: (categoryDisplayMap[listing.category] || 'Textbooks') as MarketplaceItemType,
+  condition: (conditionDisplayMap[listing.condition] || 'New') as MarketplaceCondition,
+  verifiedSeller: (listing.seller?.reviewCount || 0) >= 5,
+  negotiable: Boolean(listing.isNegotiable),
+  postedAt: new Date(listing.createdAt).toISOString(),
+});
 
 const MarketplacePage: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -32,8 +110,8 @@ const MarketplacePage: React.FC = () => {
   const [sort, setSort] = React.useState<MarketplaceSortValue>('relevant');
   const [filters, setFilters] = React.useState<MarketplaceFiltersState>({
     types: ['Textbooks', 'Calculators', 'Laptops & Tech'],
-    minPrice: 500,
-    maxPrice: 15000,
+    minPrice: 0,
+    maxPrice: 200000,
     campus: 'All Campuses',
     condition: 'Any',
   });
@@ -58,26 +136,31 @@ const MarketplacePage: React.FC = () => {
     { label: 'Settings', href: '#', icon: Settings },
   ];
 
-  const filteredListings = React.useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+  const selectedCategory = filters.types.length === 1 ? categoryMap[filters.types[0]] : undefined;
 
-    const matches = allListings.filter((listing) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        listing.title.toLowerCase().includes(normalizedSearch) ||
-        listing.sellerName.toLowerCase().includes(normalizedSearch) ||
-        listing.campus.toLowerCase().includes(normalizedSearch) ||
-        listing.itemType.toLowerCase().includes(normalizedSearch);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['marketplace-list', { page, search, sort, filters }],
+    queryFn: async () => {
+      return marketplaceApi.getListings({
+        page,
+        limit: LISTINGS_PER_PAGE,
+        search: search.trim() || undefined,
+        category: selectedCategory,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        campus: campusMap[filters.campus] || undefined,
+        condition: conditionMap[filters.condition] || undefined,
+      });
+    },
+  });
 
-      const matchesType = filters.types.includes(listing.itemType);
-      const matchesPrice = listing.price >= filters.minPrice && listing.price <= filters.maxPrice;
-      const matchesCampus = filters.campus === 'All Campuses' || listing.campus === filters.campus;
-      const matchesCondition = filters.condition === 'Any' || listing.condition === filters.condition;
+  const fetchedListings = React.useMemo(
+    () => (data?.data || []).map(mapListing),
+    [data]
+  );
 
-      return matchesSearch && matchesType && matchesPrice && matchesCampus && matchesCondition;
-    });
-
-    const sorted = [...matches];
+  const sortedListings = React.useMemo(() => {
+    const sorted = [...fetchedListings];
     if (sort === 'price-asc') {
       sorted.sort((left, right) => left.price - right.price);
     } else if (sort === 'price-desc') {
@@ -85,16 +168,11 @@ const MarketplacePage: React.FC = () => {
     } else if (sort === 'newest') {
       sorted.sort((left, right) => new Date(right.postedAt).getTime() - new Date(left.postedAt).getTime());
     }
-
     return sorted;
-  }, [filters, search, sort]);
+  }, [fetchedListings, sort]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredListings.length / LISTINGS_PER_PAGE));
-  const currentPage = Math.min(page, totalPages);
-  const pagedListings = filteredListings.slice(
-    (currentPage - 1) * LISTINGS_PER_PAGE,
-    currentPage * LISTINGS_PER_PAGE
-  );
+  const totalPages = data?.pagination?.pages || 1;
+  const absoluteMaxPrice = Math.max(200000, ...sortedListings.map((listing) => listing.price));
 
   React.useEffect(() => {
     setPage(1);
@@ -181,7 +259,7 @@ const MarketplacePage: React.FC = () => {
 
               <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <MarketplaceToolbar
-                  totalCount={filteredListings.length}
+                  totalCount={data?.pagination?.total || 0}
                   sort={sort}
                   onSortChange={setSort}
                 />
@@ -212,9 +290,13 @@ const MarketplacePage: React.FC = () => {
                   })}
                 </div>
 
-                {pagedListings.length > 0 ? (
+                {isLoading ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-slate-500">Loading listings...</div>
+                ) : isError ? (
+                  <div className="rounded-2xl border border-dashed border-red-300 bg-red-50 px-6 py-12 text-center text-red-600">Unable to load listings right now.</div>
+                ) : sortedListings.length > 0 ? (
                   <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
-                    {pagedListings.map((listing) => (
+                    {sortedListings.map((listing) => (
                       <MarketplaceListingCard key={listing.id} listing={listing} />
                     ))}
                   </div>
@@ -228,7 +310,7 @@ const MarketplacePage: React.FC = () => {
                 )}
 
                 <MarketplacePagination
-                  currentPage={currentPage}
+                  currentPage={page}
                   totalPages={totalPages}
                   onPageChange={setPage}
                 />
