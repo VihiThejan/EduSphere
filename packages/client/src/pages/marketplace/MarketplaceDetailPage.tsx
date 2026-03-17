@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { AppFooter, AppHeader, AppNavItem } from '@/components/common';
 import {
   MarketplaceCompactCard,
@@ -18,7 +18,6 @@ import {
 } from '@/components/marketplace';
 import { useAuthStore } from '@/store/authStore';
 import { marketplaceApi } from '@/services/api/marketplace.api';
-import { cartApi } from '@/services/api/cart.api';
 
 const categoryDisplayMap: Record<string, string> = {
   textbooks: 'Textbooks',
@@ -111,7 +110,6 @@ const mapDetail = (item: ApiListing): MarketplaceListingDetail => {
 
 const MarketplaceDetailPage: React.FC = () => {
   const { listingId } = useParams<{ listingId: string }>();
-  const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [search, setSearch] = React.useState('');
 
@@ -144,13 +142,6 @@ const MarketplaceDetailPage: React.FC = () => {
       .map(mapListing);
     return items;
   }, [sellerListingsResponse, listingId]);
-
-  const addToCartMutation = useMutation({
-    mutationFn: (itemId: string) => cartApi.addItem(itemId, 1),
-    onSuccess: () => {
-      navigate('/checkout');
-    },
-  });
 
   if (!listingId) {
     return <Navigate to="/marketplace" replace />;
@@ -194,11 +185,7 @@ const MarketplaceDetailPage: React.FC = () => {
           </div>
 
           <div className="mt-8 space-y-6 lg:col-span-4 lg:mt-0">
-            <MarketplaceSellerPanel
-              listing={listing}
-              onAddToCart={() => addToCartMutation.mutate(listing.id)}
-              isAddingToCart={addToCartMutation.isPending}
-            />
+            <MarketplaceSellerPanel listing={listing} />
             <MarketplacePickupMap imageUrl={listing.mapImageUrl} />
           </div>
         </div>
