@@ -15,6 +15,7 @@ import courseRoutes from './modules/courses/course.routes.js';
 import enrollmentRoutes from './modules/enrollments/enrollment.routes.js';
 import videoRoutes from './modules/videos/video.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
+import marketplaceRoutes from './modules/marketplace/marketplace.routes.js';
 
 const app: Application = express();
 
@@ -67,6 +68,7 @@ app.use(`${apiPrefix}/courses`, courseRoutes);
 app.use(`${apiPrefix}/enrollments`, enrollmentRoutes);
 app.use(`${apiPrefix}/videos`, videoRoutes);
 app.use(`${apiPrefix}/documents`, documentRoutes);
+app.use(`${apiPrefix}/marketplace`, marketplaceRoutes);
 
 // Error handling
 app.use(notFoundHandler);

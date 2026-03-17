@@ -32,6 +32,16 @@ export const config = {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
+  
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  },
+  
+  marketplace: {
+    serviceFeePercentage: parseInt(process.env.SERVICE_FEE_PERCENTAGE || '5', 10),
+  },
 } as const;
 
 export const isDevelopment = config.env === 'development';
