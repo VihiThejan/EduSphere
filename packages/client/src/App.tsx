@@ -10,7 +10,9 @@ import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/courses/CoursesPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
+import MarketplaceDetailPage from './pages/marketplace/MarketplaceDetailPage';
 import MarketplacePage from './pages/marketplace/MarketplacePage';
+import CheckoutPage from './pages/checkout/CheckoutPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
 
@@ -55,6 +57,8 @@ function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseDetailPage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/marketplace/:listingId" element={<MarketplaceDetailPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
           
           {/* Auth routes */}
           <Route

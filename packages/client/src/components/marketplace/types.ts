@@ -33,6 +33,24 @@ export interface MarketplaceListing {
   postedAt: string;
 }
 
+export interface MarketplaceSellerProfile {
+  name: string;
+  avatarUrl: string;
+  rating: number;
+  reviewCount: number;
+}
+
+export interface MarketplaceListingDetail extends MarketplaceListing {
+  breadcrumbLabel: string;
+  postedRelative: string;
+  description: string;
+  gallery: string[];
+  relevantCourses: string[];
+  seller: MarketplaceSellerProfile;
+  mapImageUrl: string;
+  similarListingIds: string[];
+}
+
 export interface MarketplaceFiltersState {
   types: MarketplaceItemType[];
   minPrice: number;

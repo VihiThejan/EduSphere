@@ -1,6 +1,13 @@
 export { default as MarketplaceFilters } from './MarketplaceFilters';
+export { default as MarketplaceCompactCard } from './MarketplaceCompactCard';
+export { default as MarketplaceDescriptionCard } from './MarketplaceDescriptionCard';
+export { default as MarketplaceDetailBreadcrumbs } from './MarketplaceDetailBreadcrumbs';
+export { default as MarketplaceImageGallery } from './MarketplaceImageGallery';
 export { default as MarketplaceListingCard } from './MarketplaceListingCard';
 export { default as MarketplacePagination } from './MarketplacePagination';
+export { default as MarketplacePickupMap } from './MarketplacePickupMap';
+export { default as MarketplaceSafetyTip } from './MarketplaceSafetyTip';
+export { default as MarketplaceSellerPanel } from './MarketplaceSellerPanel';
 export { default as MarketplaceToolbar } from './MarketplaceToolbar';
 export {
   MARKETPLACE_CAMPUSES,
@@ -14,5 +21,6 @@ export type {
   MarketplaceFiltersState,
   MarketplaceItemType,
   MarketplaceListing,
+  MarketplaceListingDetail,
   MarketplaceSortValue,
 } from './types';

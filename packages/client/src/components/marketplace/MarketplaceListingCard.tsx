@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, MapPin, ShieldCheck, UserRound, WalletCards } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { MarketplaceListing } from './types';
 
 interface MarketplaceListingCardProps {
@@ -58,12 +59,12 @@ const MarketplaceListingCard: React.FC<MarketplaceListingCardProps> = ({ listing
           </p>
         </div>
 
-        <button
-          type="button"
-          className="mt-5 rounded-xl bg-primary-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-primary-800"
+        <Link
+          to={`/marketplace/${listing.id}`}
+          className="mt-5 rounded-xl bg-primary-900 px-4 py-2.5 text-center text-sm font-bold text-white transition hover:bg-primary-800"
         >
           View Details
-        </button>
+        </Link>
       </div>
     </article>
   );
