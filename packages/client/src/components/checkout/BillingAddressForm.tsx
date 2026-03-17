@@ -62,13 +62,24 @@ const BillingAddressForm: React.FC<BillingAddressFormProps> = ({ value, errors, 
           <input
             type="text"
             placeholder="Street Address"
-            value={value.streetAddress}
-            onChange={(event) => onChange({ ...value, streetAddress: event.target.value })}
-            className={`${withError(errors?.streetAddress)} w-full`}
+            value={value.street}
+            onChange={(event) => onChange({ ...value, street: event.target.value })}
+            className={`${withError(errors?.street)} w-full`}
           />
-          {errors?.streetAddress ? (
-            <p className="mt-1 text-xs text-red-600">{errors.streetAddress}</p>
+          {errors?.street ? (
+            <p className="mt-1 text-xs text-red-600">{errors.street}</p>
           ) : null}
+        </div>
+
+        <div className="md:col-span-2">
+          <input
+            type="text"
+            placeholder="City"
+            value={value.city}
+            onChange={(event) => onChange({ ...value, city: event.target.value })}
+            className={`${withError(errors?.city)} w-full`}
+          />
+          {errors?.city ? <p className="mt-1 text-xs text-red-600">{errors.city}</p> : null}
         </div>
       </div>
     </section>

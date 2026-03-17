@@ -1,4 +1,4 @@
-export type CheckoutPaymentMethod = 'card' | 'mintpay' | 'bank-transfer';
+export type CheckoutPaymentMethod = 'card' | 'installment' | 'bank-transfer';
 
 export interface CheckoutOrderItem {
   id: string;
@@ -17,7 +17,10 @@ export interface BillingAddressData {
   firstName: string;
   lastName: string;
   email: string;
-  streetAddress: string;
+  street: string;
+  city: string;
+  postal?: string;
+  phone?: string;
 }
 
 export interface CardPaymentData {
@@ -31,7 +34,8 @@ export interface CheckoutFieldErrors {
   firstName?: string;
   lastName?: string;
   email?: string;
-  streetAddress?: string;
+  street?: string;
+  city?: string;
   cardholderName?: string;
   cardNumber?: string;
   expiryDate?: string;
