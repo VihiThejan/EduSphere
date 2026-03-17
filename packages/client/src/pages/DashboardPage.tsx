@@ -75,7 +75,7 @@ const DashboardPage: React.FC = () => {
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
     { label: 'My Learning', href: '#', icon: Clock3 },
-    { label: 'Marketplace', href: '#', icon: ShoppingBag },
+    { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
     ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
   ];
