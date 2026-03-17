@@ -59,7 +59,9 @@ export class AuthService {
 
   async login(input: LoginInput): Promise<{ user: IUser; tokens: AuthTokens }> {
     // Find user with password
-    const user = await UserModel.findOne({ email: input.email }).select('+passwordHash');
+    const user = await UserModel.findOne({ email: input.email }).select(
+      '+passwordHash +refreshTokens'
+    );
     if (!user) {
       throw new AuthenticationError('Invalid email or password');
     }

@@ -122,11 +122,17 @@ userSchema.methods.comparePassword = async function (
 };
 
 userSchema.methods.addRefreshToken = async function (token: string): Promise<void> {
+  if (!Array.isArray(this.refreshTokens)) {
+    this.refreshTokens = [];
+  }
   this.refreshTokens.push(token);
   await this.save();
 };
 
 userSchema.methods.removeRefreshToken = async function (token: string): Promise<void> {
+  if (!Array.isArray(this.refreshTokens)) {
+    this.refreshTokens = [];
+  }
   this.refreshTokens = this.refreshTokens.filter((t: string) => t !== token);
   await this.save();
 };

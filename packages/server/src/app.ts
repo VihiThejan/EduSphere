@@ -18,8 +18,11 @@ import documentRoutes from './modules/documents/document.routes.js';
 import marketplaceRoutes from './modules/marketplace/marketplace.routes.js';
 import cartRoutes from './modules/cart/cart.routes.js';
 import orderRoutes from './modules/orders/order.routes.js';
+import paymentRoutes from './modules/payments/payment.routes.js';
+import { paymentController } from './modules/payments/payment.controller.js';
 
 const app: Application = express();
+const apiPrefix = `/api/${config.apiVersion}`;
 
 // Security middleware
 app.use(helmet());
@@ -35,6 +38,13 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
+
+// Stripe webhook must receive raw body for signature verification.
+app.post(
+  `${apiPrefix}/payments/webhook`,
+  express.raw({ type: 'application/json' }),
+  (req, res, next) => paymentController.handleWebhook(req, res, next)
+);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -61,9 +71,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API routes
-const apiPrefix = `/api/${config.apiVersion}`;
-
 app.use(`${apiPrefix}/auth`, authRoutes);
 app.use(`${apiPrefix}/users`, userRoutes);
 app.use(`${apiPrefix}/courses`, courseRoutes);
@@ -73,6 +80,7 @@ app.use(`${apiPrefix}/documents`, documentRoutes);
 app.use(`${apiPrefix}/marketplace`, marketplaceRoutes);
 app.use(`${apiPrefix}/cart`, cartRoutes);
 app.use(`${apiPrefix}/orders`, orderRoutes);
+app.use(`${apiPrefix}/payments`, paymentRoutes);
 
 // Error handling
 app.use(notFoundHandler);
