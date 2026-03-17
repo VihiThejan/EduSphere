@@ -13,6 +13,7 @@ import CourseDetailPage from './pages/courses/CourseDetailPage';
 import MarketplaceDetailPage from './pages/marketplace/MarketplaceDetailPage';
 import MarketplacePage from './pages/marketplace/MarketplacePage';
 import CheckoutPage from './pages/checkout/CheckoutPage';
+import CheckoutSuccessPage from './pages/checkout/CheckoutSuccessPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
 
@@ -59,6 +60,7 @@ function App() {
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/marketplace/:listingId" element={<MarketplaceDetailPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
           
           {/* Auth routes */}
           <Route

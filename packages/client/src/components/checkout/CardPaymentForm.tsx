@@ -1,6 +1,21 @@
 import React from 'react';
+import { CardPaymentData, CheckoutFieldErrors } from './types';
 
-const CardPaymentForm: React.FC = () => {
+interface CardPaymentFormProps {
+  value: CardPaymentData;
+  errors?: CheckoutFieldErrors;
+  onChange: (value: CardPaymentData) => void;
+}
+
+const CardPaymentForm: React.FC<CardPaymentFormProps> = ({ value, errors, onChange }) => {
+  const inputClass =
+    'w-full rounded-lg border bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900';
+
+  const withError = (hasError?: string) =>
+    hasError
+      ? `${inputClass} border-red-300 focus:border-red-500`
+      : `${inputClass} border-slate-200`;
+
   return (
     <div className="mt-8 space-y-4">
       <div>
@@ -8,8 +23,13 @@ const CardPaymentForm: React.FC = () => {
         <input
           type="text"
           placeholder="John Doe"
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900"
+          value={value.cardholderName}
+          onChange={(event) => onChange({ ...value, cardholderName: event.target.value })}
+          className={withError(errors?.cardholderName)}
         />
+        {errors?.cardholderName ? (
+          <p className="mt-1 text-xs text-red-600">{errors.cardholderName}</p>
+        ) : null}
       </div>
 
       <div>
@@ -17,8 +37,11 @@ const CardPaymentForm: React.FC = () => {
         <input
           type="text"
           placeholder="0000 0000 0000 0000"
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900"
+          value={value.cardNumber}
+          onChange={(event) => onChange({ ...value, cardNumber: event.target.value })}
+          className={withError(errors?.cardNumber)}
         />
+        {errors?.cardNumber ? <p className="mt-1 text-xs text-red-600">{errors.cardNumber}</p> : null}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -27,8 +50,11 @@ const CardPaymentForm: React.FC = () => {
           <input
             type="text"
             placeholder="MM / YY"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900"
+            value={value.expiryDate}
+            onChange={(event) => onChange({ ...value, expiryDate: event.target.value })}
+            className={withError(errors?.expiryDate)}
           />
+          {errors?.expiryDate ? <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p> : null}
         </div>
 
         <div>
@@ -36,8 +62,11 @@ const CardPaymentForm: React.FC = () => {
           <input
             type="text"
             placeholder="123"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900"
+            value={value.cvv}
+            onChange={(event) => onChange({ ...value, cvv: event.target.value })}
+            className={withError(errors?.cvv)}
           />
+          {errors?.cvv ? <p className="mt-1 text-xs text-red-600">{errors.cvv}</p> : null}
         </div>
       </div>
     </div>

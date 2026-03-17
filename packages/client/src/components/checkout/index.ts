@@ -4,4 +4,11 @@ export { default as CheckoutBreadcrumbs } from './CheckoutBreadcrumbs';
 export { default as OrderSummaryCard } from './OrderSummaryCard';
 export { default as PaymentMethodSelector } from './PaymentMethodSelector';
 export { default as TrustBadges } from './TrustBadges';
-export type { CheckoutOrderItem, CheckoutPaymentMethod, CheckoutSummary } from './types';
+export type {
+	BillingAddressData,
+	CardPaymentData,
+	CheckoutFieldErrors,
+	CheckoutOrderItem,
+	CheckoutPaymentMethod,
+	CheckoutSummary,
+} from './types';

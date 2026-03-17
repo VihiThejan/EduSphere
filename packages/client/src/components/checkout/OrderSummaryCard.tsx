@@ -4,9 +4,17 @@ import { CheckoutSummary } from './types';
 
 interface OrderSummaryCardProps {
   summary: CheckoutSummary;
+  onCompletePurchase?: () => void;
+  isProcessing?: boolean;
+  errorMessage?: string | null;
 }
 
-const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ summary }) => {
+const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({
+  summary,
+  onCompletePurchase,
+  isProcessing = false,
+  errorMessage = null,
+}) => {
   const subtotal = summary.items.reduce((total, item) => total + item.price, 0);
   const total = subtotal + summary.serviceFee;
 
@@ -46,11 +54,15 @@ const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ summary }) => {
 
       <button
         type="button"
-        className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-4 font-bold text-white transition hover:bg-primary-800"
+        onClick={onCompletePurchase}
+        disabled={isProcessing}
+        className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-4 font-bold text-white transition hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <span>Complete Purchase</span>
+        <span>{isProcessing ? 'Processing...' : 'Complete Purchase'}</span>
         <Lock size={18} />
       </button>
+
+      {errorMessage ? <p className="mt-3 text-xs text-red-600">{errorMessage}</p> : null}
 
       <p className="mt-4 text-center text-[10px] leading-relaxed text-slate-400">
         By clicking 'Complete Purchase', you agree to our Terms of Service and Privacy Policy. All
