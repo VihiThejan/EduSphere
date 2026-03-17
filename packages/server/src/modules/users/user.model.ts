@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { UserRole, USER_ROLES } from '@edusphere/shared';
+import { UserRole, USER_ROLES, MarketplaceStatus, MARKETPLACE_STATUS } from '@edusphere/shared';
 
 export interface IUserProfile {
   firstName: string;
@@ -16,6 +16,8 @@ export interface IUser extends Document {
   profile: IUserProfile;
   isEmailVerified: boolean;
   refreshTokens: string[];
+  isMarketplaceSeller: boolean;
+  marketplaceStatus: MarketplaceStatus;
   createdAt: Date;
   updatedAt: Date;
   
@@ -88,14 +90,24 @@ const userSchema = new Schema<IUser>(
       default: [],
       select: false,
     },
+    isMarketplaceSeller: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    marketplaceStatus: {
+      type: String,
+      enum: Object.values(MARKETPLACE_STATUS),
+      default: MARKETPLACE_STATUS.ACTIVE,
+    },
   },
   {
     timestamps: true,
     toJSON: {
-      transform: (doc, ret) => {
-        delete ret.passwordHash;
-        delete ret.refreshTokens;
-        delete ret.__v;
+      transform: (_doc, ret) => {
+        delete (ret as any).passwordHash;
+        delete (ret as any).refreshTokens;
+        delete (ret as any).__v;
         return ret;
       },
     },
@@ -110,11 +122,17 @@ userSchema.methods.comparePassword = async function (
 };
 
 userSchema.methods.addRefreshToken = async function (token: string): Promise<void> {
+  if (!Array.isArray(this.refreshTokens)) {
+    this.refreshTokens = [];
+  }
   this.refreshTokens.push(token);
   await this.save();
 };
 
 userSchema.methods.removeRefreshToken = async function (token: string): Promise<void> {
+  if (!Array.isArray(this.refreshTokens)) {
+    this.refreshTokens = [];
+  }
   this.refreshTokens = this.refreshTokens.filter((t: string) => t !== token);
   await this.save();
 };

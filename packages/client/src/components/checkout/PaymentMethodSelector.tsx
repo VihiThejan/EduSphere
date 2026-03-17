@@ -21,8 +21,8 @@ const methods: Array<{
     icon: <CreditCard size={18} className="text-slate-400" />,
   },
   {
-    value: 'mintpay',
-    title: 'Mintpay (3 Installments)',
+    value: 'installment',
+    title: '3 Installments',
     description: '0% interest, pay in 3 monthly installments',
     badge: 'BNPL',
     icon: <span className="rounded bg-primary-900/10 px-2 py-1 text-[10px] font-bold text-primary-900">BNPL</span>,

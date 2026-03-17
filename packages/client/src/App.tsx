@@ -1,7 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { useAuthStore } from './store/authStore';
+import { config } from './config';
 import './index.css';
 
 // Pages (to be created)
@@ -16,6 +19,7 @@ import CheckoutPage from './pages/checkout/CheckoutPage';
 import CheckoutSuccessPage from './pages/checkout/CheckoutSuccessPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
+import OrderDetailPage from './pages/orders/OrderDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +29,10 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const stripePromise = config.stripePublishableKey
+  ? loadStripe(config.stripePublishableKey)
+  : null;
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,10 +57,9 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
+  const appRoutes = (
+    <BrowserRouter>
+      <Routes>
           {/* Public routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
@@ -90,6 +97,15 @@ function App() {
             }
           />
 
+          <Route
+            path="/orders/:orderId"
+            element={
+              <ProtectedRoute>
+                <OrderDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Tutor routes */}
           <Route
             path="/tutor/upload"
@@ -102,8 +118,13 @@ function App() {
 
           {/* 404 */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      </Routes>
+    </BrowserRouter>
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      {stripePromise ? <Elements stripe={stripePromise}>{appRoutes}</Elements> : appRoutes}
     </QueryClientProvider>
   );
 }

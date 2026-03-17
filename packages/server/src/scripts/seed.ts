@@ -5,6 +5,7 @@ import { UserModel } from '../modules/users/user.model';
 import { CourseModel } from '../modules/courses/course.model';
 import { LessonModel } from '../modules/courses/lesson.model';
 import { EnrollmentModel } from '../modules/enrollments/enrollment.model';
+import { MarketplaceItem } from '../modules/marketplace/marketplace.model';
 import { USER_ROLES, COURSE_STATUS, ENROLLMENT_STATUS } from '@edusphere/shared';
 import { logger } from '../shared/utils/logger';
 
@@ -15,6 +16,7 @@ import { logger } from '../shared/utils/logger';
 
 async function clearDatabase() {
   logger.info('🧹 Clearing existing data...');
+  await MarketplaceItem.deleteMany({});
   await UserModel.deleteMany({});
   await CourseModel.deleteMany({});
   await LessonModel.deleteMany({});
@@ -32,6 +34,7 @@ async function seedUsers() {
       email: 'admin@edusphere.com',
       passwordHash,
       roles: [USER_ROLES.ADMIN, USER_ROLES.TUTOR],
+      isMarketplaceSeller: true,
       profile: {
         firstName: 'Admin',
         lastName: 'User',
@@ -43,6 +46,7 @@ async function seedUsers() {
       email: 'john.tutor@edusphere.com',
       passwordHash,
       roles: [USER_ROLES.TUTOR],
+      isMarketplaceSeller: true,
       profile: {
         firstName: 'John',
         lastName: 'Smith',
@@ -54,6 +58,7 @@ async function seedUsers() {
       email: 'sarah.tutor@edusphere.com',
       passwordHash,
       roles: [USER_ROLES.TUTOR],
+      isMarketplaceSeller: true,
       profile: {
         firstName: 'Sarah',
         lastName: 'Johnson',
@@ -65,6 +70,7 @@ async function seedUsers() {
       email: 'priya.tutor@edusphere.com',
       passwordHash,
       roles: [USER_ROLES.TUTOR],
+      isMarketplaceSeller: true,
       profile: {
         firstName: 'Priya',
         lastName: 'Nair',
@@ -502,6 +508,159 @@ function completedFraction(fraction: number): boolean {
   return fraction >= 1.0;
 }
 
+async function seedMarketplaceListings(users: any[]) {
+  logger.info('🛍️ Seeding marketplace listings...');
+
+  const [admin, johnTutor, sarahTutor, priyaTutor] = users;
+
+  const sellerInfo = (user: any, rating: number, reviewCount: number) => ({
+    id: user._id,
+    name: `${user.profile.firstName} ${user.profile.lastName}`,
+    avatar: user.profile.avatar,
+    rating,
+    reviewCount,
+  });
+
+  const listings = await MarketplaceItem.create([
+    {
+      title: 'Engineering Mathematics Textbook (2nd Edition)',
+      description: 'Clean copy with minimal highlights. Great for first-year engineering students.',
+      sellerId: johnTutor._id,
+      category: 'textbooks',
+      price: 3500,
+      originalPrice: 5200,
+      quantity: 3,
+      condition: 'used-like-new',
+      campus: 'moratuwa',
+      images: [{ url: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['engineering', 'math', 'semester-1'],
+      status: 'active',
+      isNegotiable: true,
+      seller: sellerInfo(johnTutor, 4.8, 34),
+      stats: { views: 120, favorites: 22, inquiries: 10 },
+    },
+    {
+      title: 'Casio Scientific Calculator FX-991ES Plus',
+      description: 'Fully functional calculator, ideal for exams and daily coursework.',
+      sellerId: johnTutor._id,
+      category: 'calculators',
+      price: 5500,
+      originalPrice: 7900,
+      quantity: 2,
+      condition: 'used-good',
+      campus: 'colombo',
+      images: [{ url: 'https://images.unsplash.com/photo-1587145820266-a5951ee6f620?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['calculator', 'exam', 'science'],
+      status: 'active',
+      isNegotiable: false,
+      seller: sellerInfo(johnTutor, 4.8, 34),
+      stats: { views: 96, favorites: 17, inquiries: 7 },
+    },
+    {
+      title: 'Dell Latitude i5 Laptop (8GB RAM, SSD)',
+      description: 'Well-maintained laptop suitable for coding, assignments, and online classes.',
+      sellerId: sarahTutor._id,
+      category: 'laptops-tech',
+      price: 95000,
+      originalPrice: 125000,
+      quantity: 1,
+      condition: 'used-good',
+      campus: 'peradeniya',
+      images: [{ url: 'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['laptop', 'coding', 'student'],
+      status: 'active',
+      isNegotiable: true,
+      seller: sellerInfo(sarahTutor, 4.9, 51),
+      stats: { views: 180, favorites: 41, inquiries: 18 },
+    },
+    {
+      title: 'Machine Learning Lecture Notes Bundle',
+      description: 'Printed and digital notes covering supervised and unsupervised learning basics.',
+      sellerId: sarahTutor._id,
+      category: 'notes',
+      price: 1800,
+      quantity: 10,
+      condition: 'new',
+      campus: 'colombo',
+      images: [{ url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['ml', 'notes', 'data-science'],
+      status: 'active',
+      isNegotiable: false,
+      seller: sellerInfo(sarahTutor, 4.9, 51),
+      stats: { views: 88, favorites: 23, inquiries: 9 },
+    },
+    {
+      title: 'Physics Lab Equipment Starter Kit',
+      description: 'Basic lab equipment set useful for first-year practical sessions.',
+      sellerId: priyaTutor._id,
+      category: 'lab-equipment',
+      price: 7600,
+      originalPrice: 9800,
+      quantity: 4,
+      condition: 'used-like-new',
+      campus: 'kelaniya',
+      images: [{ url: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['physics', 'lab', 'equipment'],
+      status: 'active',
+      isNegotiable: true,
+      seller: sellerInfo(priyaTutor, 4.7, 29),
+      stats: { views: 102, favorites: 19, inquiries: 8 },
+    },
+    {
+      title: 'Calculus Past Papers (2019-2024)',
+      description: 'Organized set of past papers with model answers and marking schemes.',
+      sellerId: priyaTutor._id,
+      category: 'course-materials',
+      price: 1200,
+      quantity: 15,
+      condition: 'new',
+      campus: 'moratuwa',
+      images: [{ url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['calculus', 'past-papers', 'exam-prep'],
+      status: 'active',
+      isNegotiable: false,
+      seller: sellerInfo(priyaTutor, 4.7, 29),
+      stats: { views: 140, favorites: 35, inquiries: 12 },
+    },
+    {
+      title: 'Premium Notebook Pack (A4, 5 books)',
+      description: 'High-quality ruled notebooks, unopened pack.',
+      sellerId: admin._id,
+      category: 'other',
+      price: 1500,
+      quantity: 20,
+      condition: 'new',
+      campus: 'colombo',
+      images: [{ url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['stationery', 'notebook', 'study'],
+      status: 'active',
+      isNegotiable: false,
+      seller: sellerInfo(admin, 4.9, 12),
+      stats: { views: 76, favorites: 11, inquiries: 4 },
+    },
+    {
+      title: 'USB-C Hub for Laptops (6-in-1)',
+      description: 'Supports HDMI, USB 3.0, SD card reader. Great for modern laptops.',
+      sellerId: admin._id,
+      category: 'laptops-tech',
+      price: 4200,
+      originalPrice: 6200,
+      quantity: 5,
+      condition: 'new',
+      campus: 'peradeniya',
+      images: [{ url: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=900&q=80', order: 0 }],
+      tags: ['usb-c', 'accessories', 'tech'],
+      status: 'active',
+      isNegotiable: true,
+      seller: sellerInfo(admin, 4.9, 12),
+      stats: { views: 91, favorites: 20, inquiries: 9 },
+    },
+  ]);
+
+  logger.info(`✅ Created ${listings.length} marketplace listings`);
+  return listings;
+}
+
 async function seed() {
   try {
     logger.info('🔌 Connecting to database...');
@@ -514,6 +673,7 @@ async function seed() {
     const courses = await seedCourses(users);
     const lessons = await seedLessons(courses);
     await seedEnrollments(users, courses, lessons);
+    const marketplaceListings = await seedMarketplaceListings(users);
 
     logger.info('');
     logger.info('🎉 Database seeding completed successfully!');
@@ -532,6 +692,7 @@ async function seed() {
     logger.info(`  Courses:     ${courses.length}`);
     logger.info(`  Lessons:     ${lessons.length}`);
     logger.info(`  Enrollments: ${10}`);
+    logger.info(`  Marketplace: ${marketplaceListings.length}`);
     logger.info('');
 
     process.exit(0);

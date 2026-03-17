@@ -1,13 +1,30 @@
 import React from 'react';
+import { CardElement, CardElementProps } from '@stripe/react-stripe-js';
 import { CardPaymentData, CheckoutFieldErrors } from './types';
 
 interface CardPaymentFormProps {
   value: CardPaymentData;
   errors?: CheckoutFieldErrors;
   onChange: (value: CardPaymentData) => void;
+  onCardStateChange?: (state: { complete: boolean; error?: string }) => void;
 }
 
-const CardPaymentForm: React.FC<CardPaymentFormProps> = ({ value, errors, onChange }) => {
+const cardElementOptions: CardElementProps['options'] = {
+  style: {
+    base: {
+      fontSize: '14px',
+      color: '#0f172a',
+      '::placeholder': {
+        color: '#94a3b8',
+      },
+    },
+    invalid: {
+      color: '#dc2626',
+    },
+  },
+};
+
+const CardPaymentForm: React.FC<CardPaymentFormProps> = ({ value, errors, onChange, onCardStateChange }) => {
   const inputClass =
     'w-full rounded-lg border bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-primary-900';
 
@@ -33,41 +50,19 @@ const CardPaymentForm: React.FC<CardPaymentFormProps> = ({ value, errors, onChan
       </div>
 
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">Card Number</label>
-        <input
-          type="text"
-          placeholder="0000 0000 0000 0000"
-          value={value.cardNumber}
-          onChange={(event) => onChange({ ...value, cardNumber: event.target.value })}
-          className={withError(errors?.cardNumber)}
-        />
+        <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">Card Details</label>
+        <div className={withError(errors?.cardNumber)}>
+          <CardElement
+            options={cardElementOptions}
+            onChange={(event) => {
+              onCardStateChange?.({
+                complete: event.complete,
+                error: event.error?.message,
+              });
+            }}
+          />
+        </div>
         {errors?.cardNumber ? <p className="mt-1 text-xs text-red-600">{errors.cardNumber}</p> : null}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">Expiry Date</label>
-          <input
-            type="text"
-            placeholder="MM / YY"
-            value={value.expiryDate}
-            onChange={(event) => onChange({ ...value, expiryDate: event.target.value })}
-            className={withError(errors?.expiryDate)}
-          />
-          {errors?.expiryDate ? <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p> : null}
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">CVV / CVC</label>
-          <input
-            type="text"
-            placeholder="123"
-            value={value.cvv}
-            onChange={(event) => onChange({ ...value, cvv: event.target.value })}
-            className={withError(errors?.cvv)}
-          />
-          {errors?.cvv ? <p className="mt-1 text-xs text-red-600">{errors.cvv}</p> : null}
-        </div>
       </div>
     </div>
   );

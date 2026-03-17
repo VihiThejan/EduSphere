@@ -6,7 +6,9 @@ interface MarketplaceSellerPanelProps {
   listing: MarketplaceListingDetail;
 }
 
-const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({ listing }) => {
+const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({
+  listing,
+}) => {
   const stars = Array.from({ length: 5 }, (_, index) => index < Math.round(listing.seller.rating));
 
   return (
@@ -39,7 +41,10 @@ const MarketplaceSellerPanel: React.FC<MarketplaceSellerPanelProps> = ({ listing
       </div>
 
       <div className="space-y-3">
-        <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-800">
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-800"
+        >
           <MessageSquare size={16} />
           Contact Seller
         </button>
