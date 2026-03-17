@@ -73,9 +73,9 @@ const HomePage: React.FC = () => {
             <Link className="text-sm font-medium text-slate-600 transition hover:text-primary-700" to="/courses">
               Courses
             </Link>
-            <a className="text-sm font-medium text-slate-600 transition hover:text-primary-700" href="#showcase">
+            <Link className="text-sm font-medium text-slate-600 transition hover:text-primary-700" to="/marketplace">
               Marketplace
-            </a>
+            </Link>
             <a className="text-sm font-medium text-slate-600 transition hover:text-primary-700" href="#highlights">
               Community
             </a>
@@ -127,12 +127,12 @@ const HomePage: React.FC = () => {
                 >
                   Explore Courses
                 </Link>
-                <a
-                  href="#showcase"
+                <Link
+                  to="/marketplace"
                   className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
                 >
                   Browse Marketplace
-                </a>
+                </Link>
               </div>
 
               <div className="flex items-center gap-3 text-sm text-slate-500">

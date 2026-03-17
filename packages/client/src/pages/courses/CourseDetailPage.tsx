@@ -90,7 +90,7 @@ const CourseDetailPage: React.FC = () => {
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen, active: true },
     { label: 'My Learning', href: '#', icon: Clock3 },
-    { label: 'Marketplace', href: '#', icon: ShoppingBag },
+    { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
   ];
 
