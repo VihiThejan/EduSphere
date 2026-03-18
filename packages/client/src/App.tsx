@@ -20,6 +20,15 @@ import CheckoutSuccessPage from './pages/checkout/CheckoutSuccessPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
 import OrderDetailPage from './pages/orders/OrderDetailPage';
+import SellerBillingPage from './pages/seller/SellerBillingPage';
+import SellerOnboardingPage from './pages/seller/SellerOnboardingPage';
+import SellerCreateListingPage from './pages/seller/SellerCreateListingPage';
+import SellerListingsPage from './pages/seller/SellerListingsPage';
+import SellerOrdersPage from './pages/seller/SellerOrdersPage';
+import SellerDashboardPage from './pages/seller/SellerDashboardPage';
+import SellerEditListingPage from './pages/seller/SellerEditListingPage';
+import SellerProfilePage from './pages/seller/SellerProfilePage';
+import SellerRouteGate from './components/seller/SellerRouteGate';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -102,6 +111,94 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/dashboard"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerDashboardPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/billing"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerBillingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/onboarding"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate requireSellerRole={false} requireProfile={false}>
+                  <SellerOnboardingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings/create"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerCreateListingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings/:listingId/edit"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerEditListingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerListingsPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/profile"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerProfilePage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/orders"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerOrdersPage />
+                </SellerRouteGate>
               </ProtectedRoute>
             }
           />

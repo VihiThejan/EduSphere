@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { paymentService } from './payment.service.js';
+import { vendorBillingService } from '../vendor-billing/vendor-billing.service.js';
 import { ValidationError } from '../../shared/utils/errors.js';
 import { USER_ROLES } from '@edusphere/shared';
 
@@ -56,6 +57,11 @@ export class PaymentController {
       const payload = req.body as Buffer | string;
 
       await paymentService.handleWebhook(
+        payload,
+        typeof signature === 'string' ? signature : undefined
+      );
+
+      await vendorBillingService.handleWebhook(
         payload,
         typeof signature === 'string' ? signature : undefined
       );

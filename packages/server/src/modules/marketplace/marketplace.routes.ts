@@ -66,6 +66,18 @@ router.put(
 );
 
 /**
+ * @route   POST /api/v1/marketplace/:listingId/publish
+ * @desc    Publish marketplace listing (requires active vendor subscription and quota)
+ * @access  Private (Owner only)
+ */
+router.post(
+  '/:listingId/publish',
+  authenticate,
+  authorize([USER_ROLES.SELLER, USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  marketplaceController.publishListing.bind(marketplaceController)
+);
+
+/**
  * @route   DELETE /api/v1/marketplace/:listingId
  * @desc    Delete marketplace listing (soft delete)
  * @access  Private (Owner only)

@@ -3,10 +3,12 @@ import {
   MARKETPLACE_CATEGORIES,
   ITEM_CONDITION,
   MARKETPLACE_ITEM_STATUS,
+  MARKETPLACE_LISTING_PUBLISH_STATUS,
   CAMPUS_LOCATIONS,
   MarketplaceCategory,
   ItemCondition,
   MarketplaceItemStatus,
+  MarketplaceListingPublishStatus,
   CampusLocation,
 } from '@edusphere/shared';
 
@@ -42,6 +44,8 @@ export interface IMarketplaceItemDocument extends Document {
   images: IMarketplaceImage[];
   tags: string[];
   status: MarketplaceItemStatus;
+  publishStatus: MarketplaceListingPublishStatus;
+  publishGateReason?: string;
   isNegotiable: boolean;
   seller: IMarketplaceSellerInfo;
   stats: IMarketplaceStats;
@@ -189,6 +193,17 @@ const marketplaceItemSchema = new Schema<IMarketplaceItemDocument>(
       enum: Object.values(MARKETPLACE_ITEM_STATUS),
       default: MARKETPLACE_ITEM_STATUS.ACTIVE,
       index: true,
+    },
+    publishStatus: {
+      type: String,
+      enum: Object.values(MARKETPLACE_LISTING_PUBLISH_STATUS),
+      default: MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED,
+      index: true,
+    },
+    publishGateReason: {
+      type: String,
+      trim: true,
+      maxlength: 200,
     },
     isNegotiable: {
       type: Boolean,

@@ -17,8 +17,10 @@ import videoRoutes from './modules/videos/video.routes.js';
 import documentRoutes from './modules/documents/document.routes.js';
 import marketplaceRoutes from './modules/marketplace/marketplace.routes.js';
 import cartRoutes from './modules/cart/cart.routes.js';
-import orderRoutes from './modules/orders/order.routes.js';
+import orderRoutes from './modules/orders/order.routes';
 import paymentRoutes from './modules/payments/payment.routes.js';
+import vendorBillingRoutes from './modules/vendor-billing/vendor-billing.routes.js';
+import sellerProfileRoutes from './modules/seller-profile/seller-profile.routes.js';
 import { paymentController } from './modules/payments/payment.controller.js';
 
 const app: Application = express();
@@ -63,7 +65,7 @@ if (isDevelopment) {
 }
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -81,6 +83,8 @@ app.use(`${apiPrefix}/marketplace`, marketplaceRoutes);
 app.use(`${apiPrefix}/cart`, cartRoutes);
 app.use(`${apiPrefix}/orders`, orderRoutes);
 app.use(`${apiPrefix}/payments`, paymentRoutes);
+app.use(`${apiPrefix}/vendor-billing`, vendorBillingRoutes);
+app.use(`${apiPrefix}/seller-profile`, sellerProfileRoutes);
 
 // Error handling
 app.use(notFoundHandler);

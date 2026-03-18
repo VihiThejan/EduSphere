@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   BarChart3,
   BookOpen,
@@ -240,12 +241,20 @@ const MarketplacePage: React.FC = () => {
                     <h2 className="mt-4 max-w-md text-3xl font-black leading-tight tracking-tight">
                       Exams coming? Find trusted study gear and textbooks from your campus.
                     </h2>
-                    <button
-                      type="button"
-                      className="mt-6 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-primary-900 transition hover:bg-slate-100"
-                    >
-                      Explore Now
-                    </button>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-primary-900 transition hover:bg-slate-100"
+                      >
+                        Explore Now
+                      </button>
+                      <Link
+                        to={isAuthenticated ? '/seller/listings/create' : '/seller/onboarding'}
+                        className="rounded-xl border border-white/40 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
+                      >
+                        Sell an Item
+                      </Link>
+                    </div>
                   </div>
                   <div className="hidden h-full md:block">
                     <img

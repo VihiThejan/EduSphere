@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { IMarketplaceItem } from '@edusphere/shared';
+import { IMarketplaceItem, IMarketplaceItemInput } from '@edusphere/shared';
 
 export interface MarketplaceListParams {
   search?: string;
@@ -22,6 +22,20 @@ export interface MarketplaceListResponse {
   };
 }
 
+export interface SellerListingsResponse {
+  data: IMarketplaceItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PublishListingResponse {
+  listing: IMarketplaceItem;
+}
+
 export const marketplaceApi = {
   getListings: async (params: MarketplaceListParams): Promise<MarketplaceListResponse> => {
     return apiClient.get<MarketplaceListResponse>('/marketplace', params);
@@ -40,5 +54,28 @@ export const marketplaceApi = {
       page,
       limit,
     });
+  },
+
+  getMyListings: async (page = 1, limit = 10): Promise<SellerListingsResponse> => {
+    return apiClient.get<SellerListingsResponse>('/marketplace/my/listings', { page, limit });
+  },
+
+  createListing: async (payload: IMarketplaceItemInput): Promise<{ listing: IMarketplaceItem }> => {
+    return apiClient.post<{ listing: IMarketplaceItem }>('/marketplace', payload);
+  },
+
+  updateListing: async (
+    listingId: string,
+    payload: Partial<IMarketplaceItemInput>
+  ): Promise<{ listing: IMarketplaceItem }> => {
+    return apiClient.put<{ listing: IMarketplaceItem }>(`/marketplace/${listingId}`, payload);
+  },
+
+  publishListing: async (listingId: string): Promise<PublishListingResponse> => {
+    return apiClient.post<PublishListingResponse>(`/marketplace/${listingId}/publish`);
+  },
+
+  deleteListing: async (listingId: string): Promise<void> => {
+    await apiClient.delete(`/marketplace/${listingId}`);
   },
 };

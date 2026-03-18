@@ -23,13 +23,13 @@ export class MarketplaceController {
   async getListings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filters: MarketplaceFilterInput = {
-        category: req.query.category as any,
+        category: req.query.category as MarketplaceFilterInput['category'],
         minPrice: req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined,
         maxPrice: req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined,
-        condition: req.query.condition as any,
-        campus: req.query.campus as any,
+        condition: req.query.condition as MarketplaceFilterInput['condition'],
+        campus: req.query.campus as MarketplaceFilterInput['campus'],
         search: req.query.search as string,
-        status: req.query.status as any,
+        status: req.query.status as MarketplaceFilterInput['status'],
         sellerId: req.query.sellerId as string,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 6,
@@ -132,6 +132,25 @@ export class MarketplaceController {
       const response: ApiResponse = {
         success: true,
         data: result,
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async publishListing(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user!.userId;
+      const { listingId } = req.params;
+
+      const listing = await marketplaceService.publishListing(listingId, sellerId);
+
+      const response: ApiResponse = {
+        success: true,
+        data: { listing },
+        message: 'Listing published successfully',
       };
 
       res.status(200).json(response);
