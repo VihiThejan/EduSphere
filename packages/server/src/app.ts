@@ -19,6 +19,7 @@ import marketplaceRoutes from './modules/marketplace/marketplace.routes.js';
 import cartRoutes from './modules/cart/cart.routes.js';
 import orderRoutes from './modules/orders/order.routes.js';
 import paymentRoutes from './modules/payments/payment.routes.js';
+import liveSessionRoutes from './modules/live-sessions/live-session.routes.js';
 import { paymentController } from './modules/payments/payment.controller.js';
 
 const app: Application = express();
@@ -63,7 +64,7 @@ if (isDevelopment) {
 }
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -81,6 +82,7 @@ app.use(`${apiPrefix}/marketplace`, marketplaceRoutes);
 app.use(`${apiPrefix}/cart`, cartRoutes);
 app.use(`${apiPrefix}/orders`, orderRoutes);
 app.use(`${apiPrefix}/payments`, paymentRoutes);
+app.use(`${apiPrefix}/live-sessions`, liveSessionRoutes);
 
 // Error handling
 app.use(notFoundHandler);

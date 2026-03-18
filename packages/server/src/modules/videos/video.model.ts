@@ -4,7 +4,12 @@ import { VideoStatus, VIDEO_STATUS } from '@edusphere/shared';
 export interface IVideo extends Document {
   filename: string;
   originalName: string;
-  filepath: string;
+  /** Local filepath (legacy – only populated when Cloudinary is not configured) */
+  filepath?: string;
+  /** Cloudinary public_id used for transformations / deletion */
+  cloudinaryId?: string;
+  /** Cloudinary secure HTTPS URL for streaming / playback */
+  cloudUrl?: string;
   mimetype: string;
   size: number;
   duration?: number;
@@ -27,7 +32,16 @@ const videoSchema = new Schema<IVideo>(
     },
     filepath: {
       type: String,
-      required: true,
+      required: false,  // optional – populated for legacy local uploads only
+    },
+    cloudinaryId: {
+      type: String,
+      required: false,
+      index: true,
+    },
+    cloudUrl: {
+      type: String,
+      required: false,
     },
     mimetype: {
       type: String,

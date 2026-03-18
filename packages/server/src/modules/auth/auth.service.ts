@@ -144,11 +144,11 @@ export class AuthService {
 
     const accessToken = jwt.sign(payload, config.jwt.secret, {
       expiresIn: config.jwt.accessExpiry,
-    });
+    } as jwt.SignOptions);
 
     const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
       expiresIn: config.jwt.refreshExpiry,
-    });
+    } as jwt.SignOptions);
 
     return { accessToken, refreshToken };
   }

@@ -1,11 +1,48 @@
 import { Course, CourseCreateInput, CourseUpdateInput, Lesson, LessonCreateInput } from '@edusphere/shared';
 import { apiClient } from './client';
 
+export interface LiveSession {
+  _id: string;
+  title: string;
+  description?: string;
+  courseId?: string;
+  /** populated host object when fetched from getAllActiveSessions */
+  hostId: string | {
+    _id: string;
+    profile: { firstName: string; lastName?: string; avatar?: string };
+    email: string;
+  };
+  roomName: string;
+  roomUrl: string;
+  status: 'scheduled' | 'live' | 'ended';
+  scheduledAt?: string;
+  startedAt?: string;
+  endedAt?: string;
+  maxParticipants: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LiveQuestion {
+  _id: string;
+  sessionId: string;
+  askedBy: string;
+  askerName: string;
+  question: string;
+  answered: boolean;
+  answer?: string;
+  upvotes: number;
+  upvotedBy: string[];
+  createdAt: string;
+}
+
 export interface UploadedVideo {
   videoId: string;
   filename: string;
   originalName: string;
   size: number;
+  /** Cloudinary CDN URL – use this directly for playback */
+  cloudUrl?: string;
   status: string;
 }
 
@@ -156,5 +193,98 @@ export const tutorApi = {
   /** Delete a document by ID */
   deleteDocument: async (documentId: string): Promise<void> => {
     await apiClient.delete(`/documents/${documentId}`);
+  },
+
+  // ── Live Sessions (Daily.co) ─────────────────────────────────────────────
+
+  /** Create a new Daily.co live session room */
+  createLiveSession: async (input: {
+    title: string;
+    description?: string;
+    courseId?: string;
+    scheduledAt?: string;
+    maxParticipants?: number;
+  }) => {
+    const response = await apiClient.post<{ session: LiveSession }>('/live-sessions', input);
+    return response.session;
+  },
+
+  /** Get a Daily.co meeting token + room URL to join a session */
+  joinLiveSession: async (sessionId: string, asHost = false) => {
+    const response = await apiClient.get<{
+      roomUrl: string;
+      token: string;
+      sessionId: string;
+      title: string;
+      status: string;
+    }>(`/live-sessions/${sessionId}/join?host=${asHost}`);
+    return response;
+  },
+
+  /** End a live session (host only) */
+  endLiveSession: async (sessionId: string) => {
+    const rawClient = apiClient.getClient();
+    const response = await rawClient.patch<{ success: boolean; data: { session: LiveSession } }>(
+      `/live-sessions/${sessionId}/end`
+    );
+    return response.data.data.session;
+  },
+
+  /** List sessions hosted by the authenticated tutor */
+  getHostedSessions: async () => {
+    const response = await apiClient.get<{ sessions: LiveSession[] }>('/live-sessions/my/hosted');
+    return response.sessions ?? [];
+  },
+
+  /** List active sessions for a course */
+  getCourseSessions: async (courseId: string) => {
+    const response = await apiClient.get<{ sessions: LiveSession[] }>(
+      `/live-sessions/course/${courseId}`
+    );
+    return response.sessions ?? [];
+  },
+
+  /** All active/scheduled sessions (for student browse) */
+  getAllLiveSessions: async () => {
+    const response = await apiClient.get<{ sessions: LiveSession[] }>('/live-sessions');
+    return response.sessions ?? [];
+  },
+
+  // ── Q&A ────────────────────────────────────────────────────────────────
+
+  getQuestions: async (sessionId: string): Promise<LiveQuestion[]> => {
+    const response = await apiClient.get<{ questions: LiveQuestion[] }>(
+      `/live-sessions/${sessionId}/questions`
+    );
+    return response.questions ?? [];
+  },
+
+  askQuestion: async (sessionId: string, question: string): Promise<LiveQuestion> => {
+    const response = await apiClient.post<{ question: LiveQuestion }>(
+      `/live-sessions/${sessionId}/questions`,
+      { question }
+    );
+    return response.question;
+  },
+
+  answerQuestion: async (
+    sessionId: string,
+    questionId: string,
+    answer: string
+  ): Promise<LiveQuestion> => {
+    const rawClient = apiClient.getClient();
+    const response = await rawClient.patch<{ success: boolean; data: { question: LiveQuestion } }>(
+      `/api/v1/live-sessions/${sessionId}/questions/${questionId}/answer`,
+      { answer }
+    );
+    return response.data.data.question;
+  },
+
+  upvoteQuestion: async (sessionId: string, questionId: string): Promise<LiveQuestion> => {
+    const response = await apiClient.post<{ question: LiveQuestion }>(
+      `/live-sessions/${sessionId}/questions/${questionId}/upvote`,
+      {}
+    );
+    return response.question;
   },
 };

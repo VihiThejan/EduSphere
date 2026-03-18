@@ -42,6 +42,18 @@ export const config = {
   marketplace: {
     serviceFeePercentage: parseInt(process.env.SERVICE_FEE_PERCENTAGE || '5', 10),
   },
+
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    folder: process.env.CLOUDINARY_FOLDER || 'edusphere/videos',
+  },
+
+  daily: {
+    apiKey: process.env.DAILY_API_KEY || '',
+    apiBaseUrl: 'https://api.daily.co/v1',
+  },
 } as const;
 
 export const isDevelopment = config.env === 'development';

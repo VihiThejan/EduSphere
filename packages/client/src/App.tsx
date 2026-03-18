@@ -20,6 +20,7 @@ import CheckoutSuccessPage from './pages/checkout/CheckoutSuccessPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
 import OrderDetailPage from './pages/orders/OrderDetailPage';
+import LiveSessionPage from './pages/live/LiveSessionPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -112,6 +113,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <TutorUploadPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Live sessions */}
+          <Route
+            path="/live"
+            element={
+              <ProtectedRoute>
+                <LiveSessionPage />
               </ProtectedRoute>
             }
           />

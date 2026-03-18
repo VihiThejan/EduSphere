@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import fs from 'fs';
 import { videoService } from './video.service.js';
 import { ApiResponse } from '@edusphere/shared';
 
@@ -28,6 +27,7 @@ export class VideoController {
           filename: video.filename,
           originalName: video.originalName,
           size: video.size,
+          cloudUrl: video.cloudUrl,
           status: video.status,
         },
         message: 'Video uploaded successfully',
@@ -66,6 +66,7 @@ export class VideoController {
             filename: v.filename,
             originalName: v.originalName,
             size: v.size,
+            cloudUrl: v.cloudUrl,
             status: v.status,
           })),
           count: videos.length,
@@ -100,41 +101,11 @@ export class VideoController {
       const { videoId } = req.params;
       const userId = req.user!.userId;
 
-      const videoPath = await videoService.getVideoPath(videoId, userId);
+      // Get Cloudinary URL – client streams directly from CDN (no server bandwidth used)
+      const cloudUrl = await videoService.getVideoStreamUrl(videoId, userId);
 
-      // Get file stats
-      const stat = fs.statSync(videoPath);
-      const fileSize = stat.size;
-      const range = req.headers.range;
-
-      if (range) {
-        // Parse range header
-        const parts = range.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunkSize = end - start + 1;
-
-        // Create read stream
-        const stream = fs.createReadStream(videoPath, { start, end });
-
-        // Set headers for partial content
-        res.writeHead(206, {
-          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': chunkSize,
-          'Content-Type': 'video/mp4',
-        });
-
-        stream.pipe(res);
-      } else {
-        // No range, send entire file
-        res.writeHead(200, {
-          'Content-Length': fileSize,
-          'Content-Type': 'video/mp4',
-        });
-
-        fs.createReadStream(videoPath).pipe(res);
-      }
+      // 302 redirect to the Cloudinary CDN URL
+      res.redirect(302, cloudUrl);
     } catch (error) {
       next(error);
     }

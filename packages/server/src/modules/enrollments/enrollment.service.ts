@@ -6,7 +6,7 @@ import {
   ConflictError,
   ValidationError,
 } from '../../shared/utils/errors.js';
-import { COURSE_STATUS, ENROLLMENT_STATUS, ERROR_CODES } from '@edusphere/shared';
+import { COURSE_STATUS, ENROLLMENT_STATUS } from '@edusphere/shared';
 import mongoose from 'mongoose';
 
 export class EnrollmentService {
