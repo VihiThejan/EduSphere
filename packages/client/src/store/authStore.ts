@@ -8,12 +8,19 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+  /** true once the silent-restore attempt has finished (success or failure) */
+  isInitialized: boolean;
+
   setUser: (user: User | null) => void;
   setAccessToken: (token: string) => void;
   login: (accessToken: string, user: User) => void;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  /**
+   * Called once on app mount.
+   * Tries to restore the session using the HTTP-only refresh cookie.
+   * Always sets isInitialized=true when done so the app can render.
+   */
+  initAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -22,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: false,
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
 
@@ -29,47 +37,46 @@ export const useAuthStore = create<AuthState>()(
         apiClient.setAccessToken(token);
       },
 
-      login: (accessToken, user) => {
+      login: (accessToken: string, user: User) => {
         apiClient.setAccessToken(accessToken);
-        set({ user, isAuthenticated: true });
+        set({ user, isAuthenticated: true, isInitialized: true });
       },
 
       logout: async () => {
         try {
           await authApi.logout();
-        } catch (error) {
-          console.error('Logout error:', error);
+        } catch {
+          // ignore
         } finally {
           apiClient.clearAccessToken();
           set({ user: null, isAuthenticated: false });
         }
       },
 
-      checkAuth: async () => {
-        const token = apiClient.getAccessToken();
-        if (!token) {
-          set({ isAuthenticated: false, user: null });
-          return;
-        }
-
+      initAuth: async () => {
+        set({ isLoading: true });
         try {
-          set({ isLoading: true });
+          // Try to get a fresh access token from the refresh cookie
+          const newToken = await apiClient.tryRestoreSession();
+          if (!newToken) {
+            set({ user: null, isAuthenticated: false });
+            return;
+          }
+          // Token restored — fetch the user profile
           const { user } = await authApi.getCurrentUser();
           set({ user, isAuthenticated: true });
-        } catch (error) {
+        } catch {
           apiClient.clearAccessToken();
           set({ user: null, isAuthenticated: false });
         } finally {
-          set({ isLoading: false });
+          set({ isLoading: false, isInitialized: true });
         }
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({
-        // Don't persist sensitive data
-        isAuthenticated: state.isAuthenticated,
-      }),
+      // Persist only the user object (no tokens — they live in cookies / memory)
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );

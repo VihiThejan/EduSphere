@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, GraduationCap, BookOpen, AlertTriangle } from 'lucide-react';
 import { userRegisterSchema, UserRegisterInput, USER_ROLES } from '@edusphere/shared';
 import { authApi } from '@/services/api/auth.api';
 import { useAuthStore } from '@/store/authStore';
@@ -11,14 +12,34 @@ const RegisterPage: React.FC = () => {
   const { login } = useAuthStore();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
+    control,
+    watch,
     formState: { errors },
   } = useForm<UserRegisterInput>({
     resolver: zodResolver(userRegisterSchema),
+    defaultValues: { roles: [USER_ROLES.STUDENT] },
   });
+
+  const password = watch('password', '');
+
+  const passwordStrength = () => {
+    if (!password) return null;
+    const checks = [
+      password.length >= 8,
+      /[A-Z]/.test(password),
+      /[a-z]/.test(password),
+      /\d/.test(password),
+    ].filter(Boolean).length;
+    if (checks <= 2) return { label: 'Weak', color: 'bg-red-500', width: '33%' };
+    if (checks === 3) return { label: 'Fair', color: 'bg-yellow-500', width: '66%' };
+    return { label: 'Strong', color: 'bg-emerald-500', width: '100%' };
+  };
+  const strength = passwordStrength();
 
   const onSubmit = async (data: UserRegisterInput) => {
     try {
@@ -28,70 +49,75 @@ const RegisterPage: React.FC = () => {
       login(response.accessToken, response.user);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Registration failed. Please try again.');
+      setError(
+        err?.response?.data?.error?.message || 'Registration failed. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-              sign in to existing account
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-extrabold text-slate-900">Create your account</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Already have one?{' '}
+            <Link to="/login" className="font-medium text-primary-900 hover:underline">
+              Sign in
             </Link>
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        {/* Card */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-800">{error}</div>
+            <div className="mb-5 flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+              {error}
             </div>
           )}
 
-          <div className="rounded-md shadow-sm space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            {/* Name row */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  First Name
+                <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-1">
+                  First name
                 </label>
                 <input
                   {...register('firstName')}
                   id="firstName"
                   type="text"
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="John"
+                  className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/20"
                 />
                 {errors.firstName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+                  <p className="mt-1 text-xs text-red-500">{errors.firstName.message}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Last Name
+                <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-1">
+                  Last name
                 </label>
                 <input
                   {...register('lastName')}
                   id="lastName"
                   type="text"
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Doe"
+                  className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/20"
                 />
                 {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+                  <p className="mt-1 text-xs text-red-500">{errors.lastName.message}</p>
                 )}
               </div>
             </div>
 
+            {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
                 Email address
               </label>
               <input
@@ -99,68 +125,128 @@ const RegisterPage: React.FC = () => {
                 id="email"
                 type="email"
                 autoComplete="email"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="john.doe@example.com"
+                placeholder="john@example.com"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/20"
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
+            {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
                 Password
               </label>
-              <input
-                {...register('password')}
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="••••••••"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Must be at least 8 characters with uppercase, lowercase, and numbers
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">I want to:</label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    {...register('roles')}
-                    type="checkbox"
-                    value={USER_ROLES.STUDENT}
-                    defaultChecked
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Learn (Student)</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    {...register('roles')}
-                    type="checkbox"
-                    value={USER_ROLES.TUTOR}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Teach (Tutor)</span>
-                </label>
+              <div className="relative">
+                <input
+                  {...register('password')}
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Min. 8 characters"
+                  className="block w-full rounded-lg border border-slate-300 px-3 py-2.5 pr-10 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-900/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
               </div>
+              {strength && (
+                <div className="mt-2 space-y-1">
+                  <div className="h-1.5 w-full rounded-full bg-slate-100">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${strength.color}`}
+                      style={{ width: strength.width }}
+                    />
+                  </div>
+                  <p className={`text-xs font-medium ${
+                    strength.label === 'Weak' ? 'text-red-500' :
+                    strength.label === 'Fair' ? 'text-yellow-600' : 'text-emerald-600'
+                  }`}>
+                    {strength.label}
+                  </p>
+                </div>
+              )}
+              {errors.password && (
+                <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+              )}
             </div>
-          </div>
 
-          <div>
+            {/* Role — radio buttons so exactly one is always selected */}
+            <div>
+              <p className="block text-sm font-medium text-slate-700 mb-2">I want to:</p>
+              <Controller
+                name="roles"
+                control={control}
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Student */}
+                    <label
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
+                        field.value?.includes(USER_ROLES.STUDENT) && !field.value?.includes(USER_ROLES.TUTOR)
+                          ? 'border-primary-900 bg-primary-900/5'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        className="sr-only"
+                        checked={field.value?.includes(USER_ROLES.STUDENT) && !field.value?.includes(USER_ROLES.TUTOR)}
+                        onChange={() => field.onChange([USER_ROLES.STUDENT])}
+                      />
+                      <BookOpen size={18} className="text-primary-900 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Learn</p>
+                        <p className="text-xs text-slate-500">Student</p>
+                      </div>
+                    </label>
+
+                    {/* Tutor */}
+                    <label
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition ${
+                        field.value?.includes(USER_ROLES.TUTOR)
+                          ? 'border-primary-900 bg-primary-900/5'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        className="sr-only"
+                        checked={!!field.value?.includes(USER_ROLES.TUTOR)}
+                        onChange={() => field.onChange([USER_ROLES.TUTOR])}
+                      />
+                      <GraduationCap size={18} className="text-primary-900 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Teach</p>
+                        <p className="text-xs text-slate-500">Tutor</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              />
+              {errors.roles && (
+                <p className="mt-1 text-xs text-red-500">{errors.roles.message as string}</p>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="w-full rounded-lg bg-primary-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? 'Creating account…' : 'Create account'}
             </button>
-          </div>
-        </form>
+          </form>
+
+          <p className="mt-5 text-center text-xs text-slate-400">
+            By creating an account you agree to our{' '}
+            <span className="underline cursor-pointer">Terms of Service</span>
+          </p>
+        </div>
       </div>
     </div>
   );

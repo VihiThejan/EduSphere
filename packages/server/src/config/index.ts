@@ -54,6 +54,25 @@ export const config = {
     apiKey: process.env.DAILY_API_KEY || '',
     apiBaseUrl: 'https://api.daily.co/v1',
   },
+
+  email: {
+    /**
+     * Leave SMTP_HOST empty → dev mode uses Ethereal (auto-creates a fake
+     * inbox at https://ethereal.email so you can preview emails without
+     * sending real ones — completely free, no sign-up needed).
+     *
+     * For production set:
+     *   SMTP_HOST=smtp.gmail.com  SMTP_PORT=587
+     *   SMTP_USER=you@gmail.com   SMTP_PASS=<gmail-app-password>
+     */
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.EMAIL_FROM || 'EduSphere <no-reply@edusphere.dev>',
+  },
+
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
 } as const;
 
 export const isDevelopment = config.env === 'development';

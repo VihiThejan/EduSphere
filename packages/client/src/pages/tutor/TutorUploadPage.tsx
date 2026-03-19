@@ -353,17 +353,72 @@ const TutorUploadPage: React.FC = () => {
     [courseId, addToast]
   );
 
+  // ---- File validation ----
+  const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/avi'];
+  const ALLOWED_VIDEO_EXTS = ['.mp4', '.mov', '.webm', '.avi'];
+  const ALLOWED_DOC_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
+  const ALLOWED_DOC_EXTS = ['.pdf', '.doc', '.docx'];
+  const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
+  const MAX_DOC_BYTES   = 50  * 1024 * 1024; // 50 MB
+
+  const validateFile = useCallback(
+    (file: File, kind: FileKind): string | null => {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (kind === 'video') {
+        if (!ALLOWED_VIDEO_TYPES.includes(file.type) && !ALLOWED_VIDEO_EXTS.includes(ext)) {
+          return `"${file.name}" is not a supported video format. Allowed: MP4, MOV, WebM, AVI.`;
+        }
+        if (file.size > MAX_VIDEO_BYTES) {
+          return `"${file.name}" exceeds the 500 MB video size limit (${formatBytes(file.size)}).`;
+        }
+        if (file.size === 0) {
+          return `"${file.name}" is empty and cannot be uploaded.`;
+        }
+      } else {
+        if (!ALLOWED_DOC_TYPES.includes(file.type) && !ALLOWED_DOC_EXTS.includes(ext)) {
+          return `"${file.name}" is not a supported document format. Allowed: PDF, DOC, DOCX.`;
+        }
+        if (file.size > MAX_DOC_BYTES) {
+          return `"${file.name}" exceeds the 50 MB document size limit (${formatBytes(file.size)}).`;
+        }
+        if (file.size === 0) {
+          return `"${file.name}" is empty and cannot be uploaded.`;
+        }
+      }
+      return null;
+    },
+    [addToast]
+  );
+
   const handleFileSelect = useCallback(
     (files: FileList | null, kind: FileKind) => {
       if (!files || files.length === 0) return;
       const arr = Array.from(files);
+
+      // Validate each file before uploading
+      const valid: File[] = [];
+      for (const file of arr) {
+        const error = validateFile(file, kind);
+        if (error) {
+          addToast('error', error);
+        } else {
+          valid.push(file);
+        }
+      }
+
+      if (valid.length === 0) return;
+
       if (kind === 'video') {
-        void uploadVideos(arr);
+        void uploadVideos(valid);
       } else {
-        arr.forEach((file) => void uploadDocument(file));
+        valid.forEach((file) => void uploadDocument(file));
       }
     },
-    [uploadVideos, uploadDocument]
+    [uploadVideos, uploadDocument, validateFile, addToast]
   );
 
   const removeFile = useCallback(

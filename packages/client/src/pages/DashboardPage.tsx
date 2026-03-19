@@ -41,7 +41,7 @@ const DashboardPage: React.FC = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['student-dashboard', user?._id],
     queryFn: dashboardApi.getStudentDashboardData,
-    enabled: true,
+    enabled: isAuthenticated && !!user,
   });
 
   const activeEnrollments = data?.enrollments ?? [];
@@ -289,11 +289,14 @@ const DashboardPage: React.FC = () => {
 // ── Live Sessions Widget ──────────────────────────────────────────────────────
 interface LiveSessionsWidgetProps { isTutor: boolean }
 const LiveSessionsWidget: React.FC<LiveSessionsWidgetProps> = ({ isTutor }) => {
+  const { user, isAuthenticated } = useAuthStore();
   // Students see all sessions; tutors see their own hosted sessions
+  // enabled guard prevents firing before auth is fully initialised
   const { data: sessions = [], isLoading } = useQuery<LiveSession[]>({
     queryKey: isTutor ? ['hosted-sessions'] : ['live-sessions-widget'],
     queryFn: isTutor ? tutorApi.getHostedSessions : tutorApi.getAllLiveSessions,
     refetchInterval: 30_000,
+    enabled: isAuthenticated && !!user,
   });
   const liveSessions = sessions.filter((s) => s.status === 'live');
 

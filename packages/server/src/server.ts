@@ -14,6 +14,15 @@ const startServer = async (): Promise<void> => {
       logger.info(`📍 API available at http://localhost:${config.port}/api/${config.apiVersion}`);
     });
 
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        logger.error(`Port ${config.port} is already in use. Kill the process holding it and retry.`);
+      } else {
+        logger.error('Server error:', err);
+      }
+      process.exit(1);
+    });
+
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} received, shutting down gracefully...`);

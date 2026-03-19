@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Video, Plus, Users, Clock, Send, ThumbsUp, CheckCircle,
-  ChevronLeft, Mic, MicOff, LogOut, Radio,
+  Video, Plus, Users, Clock,
+  ChevronLeft, LogOut, Radio, ShieldCheck,
 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/authStore';
-import { tutorApi, LiveSession, LiveQuestion } from '@/services/api/tutor.api';
+import { tutorApi, LiveSession } from '@/services/api/tutor.api';
 import { AppFooter, AppHeader, AppSidebar } from '@/components/common';
 import { USER_ROLES } from '@edusphere/shared';
 import type { AppNavItem } from '@/components/common';
@@ -38,168 +38,7 @@ function getHost(session: LiveSession) {
   return { name: 'Tutor', avatar: null };
 }
 
-// ── Q&A Panel ─────────────────────────────────────────────────────────────────
-interface QAPanelProps {
-  sessionId: string;
-  isHost: boolean;
-  userId: string;
-}
-const QAPanel: React.FC<QAPanelProps> = ({ sessionId, isHost, userId }) => {
-  const queryClient = useQueryClient();
-  const [input, setInput] = useState('');
-  const [answerInputs, setAnswerInputs] = useState<Record<string, string>>({});
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  const { data: questions = [] } = useQuery<LiveQuestion[]>({
-    queryKey: ['live-questions', sessionId],
-    queryFn: () => tutorApi.getQuestions(sessionId),
-    refetchInterval: 5000,
-  });
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [questions.length]);
-
-  const askMutation = useMutation({
-    mutationFn: () => tutorApi.askQuestion(sessionId, input.trim()),
-    onSuccess: () => {
-      setInput('');
-      void queryClient.invalidateQueries({ queryKey: ['live-questions', sessionId] });
-    },
-  });
-
-  const answerMutation = useMutation({
-    mutationFn: ({ qId, answer }: { qId: string; answer: string }) =>
-      tutorApi.answerQuestion(sessionId, qId, answer),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['live-questions', sessionId] });
-    },
-  });
-
-  const upvoteMutation = useMutation({
-    mutationFn: (qId: string) => tutorApi.upvoteQuestion(sessionId, qId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['live-questions', sessionId] });
-    },
-  });
-
-  return (
-    <div className="flex h-full flex-col bg-white border-l border-slate-200">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
-        <Mic size={15} className="text-primary-900" />
-        <span className="font-semibold text-sm text-slate-800">Q & A</span>
-        <span className="ml-auto rounded-full bg-primary-900/10 px-2 py-0.5 text-xs font-bold text-primary-900">
-          {questions.length}
-        </span>
-      </div>
-
-      {/* Questions list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-        {questions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-center py-10">
-            <MicOff size={28} className="text-slate-300" />
-            <p className="text-xs text-slate-400">No questions yet.<br />Be the first to ask!</p>
-          </div>
-        ) : (
-          questions.map((q) => {
-            const myUpvote = q.upvotedBy.includes(userId);
-            return (
-              <div
-                key={q._id}
-                className={`rounded-xl p-3 text-sm border ${q.answered ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}
-              >
-                {/* Question */}
-                <div className="flex items-start gap-2">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-900/10 text-xs font-bold text-primary-900">
-                    {q.askerName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-slate-500">{q.askerName}</span>
-                    <p className="mt-0.5 text-slate-800 break-words">{q.question}</p>
-                  </div>
-                </div>
-
-                {/* Answer */}
-                {q.answered && q.answer && (
-                  <div className="mt-2 ml-8 rounded-lg bg-white border border-emerald-200 p-2">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 mb-1">
-                      <CheckCircle size={11} /> Answered
-                    </div>
-                    <p className="text-xs text-slate-700">{q.answer}</p>
-                  </div>
-                )}
-
-                {/* Host answer input */}
-                {isHost && !q.answered && (
-                  <div className="mt-2 ml-8 flex gap-1">
-                    <input
-                      className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary-900/30"
-                      placeholder="Type your answer…"
-                      value={answerInputs[q._id] ?? ''}
-                      onChange={(e) => setAnswerInputs((prev) => ({ ...prev, [q._id]: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && answerInputs[q._id]?.trim()) {
-                          answerMutation.mutate({ qId: q._id, answer: answerInputs[q._id] });
-                          setAnswerInputs((prev) => ({ ...prev, [q._id]: '' }));
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        if (answerInputs[q._id]?.trim()) {
-                          answerMutation.mutate({ qId: q._id, answer: answerInputs[q._id] });
-                          setAnswerInputs((prev) => ({ ...prev, [q._id]: '' }));
-                        }
-                      }}
-                      className="rounded-lg bg-emerald-600 px-2 py-1 text-white hover:bg-emerald-700 transition"
-                    >
-                      <Send size={11} />
-                    </button>
-                  </div>
-                )}
-
-                {/* Upvote */}
-                <div className="mt-2 ml-8 flex items-center gap-1">
-                  <button
-                    onClick={() => upvoteMutation.mutate(q._id)}
-                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs transition ${myUpvote ? 'bg-primary-900 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
-                  >
-                    <ThumbsUp size={10} /> {q.upvotes}
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Ask box – students only */}
-      {!isHost && (
-        <div className="border-t border-slate-200 px-3 py-3">
-          <div className="flex gap-2">
-            <input
-              className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-900/30"
-              placeholder="Ask a question…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) askMutation.mutate(); }}
-              maxLength={500}
-            />
-            <button
-              onClick={() => { if (input.trim()) askMutation.mutate(); }}
-              disabled={!input.trim() || askMutation.isPending}
-              className="flex items-center justify-center rounded-xl bg-primary-900 px-3 py-2 text-white hover:bg-primary-900/90 disabled:opacity-50 transition"
-            >
-              <Send size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+// Q&A removed — Jitsi Meet has built-in live chat (toolbar 'chat' button)
 
 // ── Room View (Jitsi Meet iframe + Q&A side panel) ────────────────────────────
 interface RoomViewProps {
@@ -227,7 +66,7 @@ type JitsiAPI = {
 };
 
 const RoomView: React.FC<RoomViewProps> = ({
-  roomUrl, title, sessionId, isHost, userId, onLeave, onEnd
+  roomUrl, title, sessionId: _sessionId, isHost, userId, onLeave, onEnd
 }) => {
   const jitsiContainerRef = React.useRef<HTMLDivElement>(null);
   const jitsiApiRef = React.useRef<JitsiAPI | null>(null);
@@ -240,6 +79,8 @@ const RoomView: React.FC<RoomViewProps> = ({
     const scriptId = 'jitsi-external-api';
     const initJitsi = () => {
       if (!jitsiContainerRef.current || jitsiApiRef.current) return;
+      // Tutors join as host (moderator) — start unmuted.
+      // Students join as attendees — start muted but CAN unmute mic & camera.
       jitsiApiRef.current = new window.JitsiMeetExternalAPI('meet.jit.si', {
         roomName,
         parentNode: jitsiContainerRef.current,
@@ -248,20 +89,30 @@ const RoomView: React.FC<RoomViewProps> = ({
         configOverwrite: {
           prejoinPageEnabled: false,
           disableDeepLinking: true,
-          startWithAudioMuted: false,
-          startWithVideoMuted: false,
+          // Host starts with audio/video ON; students start muted but can unmute freely
+          startWithAudioMuted: !isHost,
+          startWithVideoMuted: !isHost,
           subject: title,
+          // Let all participants use mic and camera — no restrictions
+          disableAudioLevels: false,
+          enableNoisyMicDetection: true,
         },
         interfaceConfigOverwrite: {
           SHOW_JITSI_WATERMARK: false,
           SHOW_BRAND_WATERMARK: false,
           TOOLBAR_BUTTONS: [
-            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-            'fodeviceselection', 'hangup', 'chat', 'raisehand', 'tileview',
-            'select-background', 'stats', 'shortcuts', 'videobackgroundblur',
+            // Both host and students can use microphone and camera
+            'microphone', 'camera', 'desktop', 'fullscreen',
+            'fodeviceselection', 'hangup',
+            // Built-in Jitsi chat — replaces the custom Q&A panel
+            'chat',
+            'raisehand', 'tileview', 'select-background',
+            'stats', 'shortcuts', 'videobackgroundblur',
           ],
         },
-        userInfo: { displayName: userId },
+        userInfo: {
+          displayName: isHost ? `${userId} (Host)` : userId,
+        },
       });
 
       // Auto leave when user hangs up inside Jitsi UI
@@ -292,6 +143,11 @@ const RoomView: React.FC<RoomViewProps> = ({
         <div className="flex items-center gap-3">
           <Radio size={15} className="text-emerald-400 animate-pulse" />
           <span className="font-semibold text-sm truncate max-w-xs">{title}</span>
+          {isHost && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-400/20 border border-amber-400/40 px-2 py-0.5 text-xs font-semibold text-amber-300">
+              <ShieldCheck size={11} /> Host
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isHost && onEnd && (
@@ -311,15 +167,9 @@ const RoomView: React.FC<RoomViewProps> = ({
         </div>
       </div>
 
-      {/* Main area: Jitsi + Q&A */}
+      {/* Main area: full-width Jitsi — use the built-in Chat button for messaging */}
       <div className="flex flex-1 min-h-0">
-        {/* Jitsi container */}
         <div ref={jitsiContainerRef} className="flex-1 min-w-0 bg-slate-900" />
-
-        {/* Q&A panel */}
-        <div className="w-80 shrink-0 flex flex-col">
-          <QAPanel sessionId={sessionId} isHost={isHost} userId={userId} />
-        </div>
       </div>
     </div>
   );
