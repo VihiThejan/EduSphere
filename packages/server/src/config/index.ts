@@ -42,6 +42,37 @@ export const config = {
   marketplace: {
     serviceFeePercentage: parseInt(process.env.SERVICE_FEE_PERCENTAGE || '5', 10),
   },
+
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    folder: process.env.CLOUDINARY_FOLDER || 'edusphere/videos',
+  },
+
+  daily: {
+    apiKey: process.env.DAILY_API_KEY || '',
+    apiBaseUrl: 'https://api.daily.co/v1',
+  },
+
+  email: {
+    /**
+     * Leave SMTP_HOST empty → dev mode uses Ethereal (auto-creates a fake
+     * inbox at https://ethereal.email so you can preview emails without
+     * sending real ones — completely free, no sign-up needed).
+     *
+     * For production set:
+     *   SMTP_HOST=smtp.gmail.com  SMTP_PORT=587
+     *   SMTP_USER=you@gmail.com   SMTP_PASS=<gmail-app-password>
+     */
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.EMAIL_FROM || 'EduSphere <no-reply@edusphere.dev>',
+  },
+
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
 } as const;
 
 export const isDevelopment = config.env === 'development';

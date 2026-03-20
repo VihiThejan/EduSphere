@@ -41,6 +41,32 @@ router.post(
 );
 
 /**
+ * @route   GET /api/v1/videos/sign-upload
+ * @desc    Return a Cloudinary signed upload signature for direct browser upload
+ * @access  Private (Tutor / Admin)
+ * NOTE: Must be before /:videoId
+ */
+router.get(
+  '/sign-upload',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  videoController.signUpload.bind(videoController)
+);
+
+/**
+ * @route   POST /api/v1/videos/confirm
+ * @desc    Save Cloudinary metadata after a successful direct browser upload
+ * @access  Private (Tutor / Admin)
+ * NOTE: Must be before /:videoId
+ */
+router.post(
+  '/confirm',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  videoController.confirmUpload.bind(videoController)
+);
+
+/**
  * @route   GET /api/v1/videos/:videoId
  * @desc    Get video metadata
  * @access  Private

@@ -7,16 +7,18 @@ import {
   Clock3,
   LayoutDashboard,
   ListChecks,
-  Plus,
   Settings,
   ShoppingBag,
   TrendingUp,
   Upload,
   BookPlus,
   ArrowRight,
+  Radio,
+  Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { tutorApi, LiveSession } from '@/services/api/tutor.api';
 import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
@@ -39,7 +41,7 @@ const DashboardPage: React.FC = () => {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['student-dashboard', user?._id],
     queryFn: dashboardApi.getStudentDashboardData,
-    enabled: true,
+    enabled: isAuthenticated && !!user,
   });
 
   const activeEnrollments = data?.enrollments ?? [];
@@ -77,6 +79,7 @@ const DashboardPage: React.FC = () => {
     { label: 'My Learning', href: '#', icon: Clock3 },
     { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
+    { label: 'Live Sessions', href: '/live', icon: Radio },
     ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
   ];
 
@@ -177,13 +180,13 @@ const DashboardPage: React.FC = () => {
                 Upload Course
               </Link>
             ) : (
-              <button
-                type="button"
+              <Link
+                to="/live"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
               >
-                <Plus size={16} />
-                Join New Session
-              </button>
+                <Radio size={16} />
+                Join Live Session
+              </Link>
             )}
           </div>
 
@@ -231,6 +234,9 @@ const DashboardPage: React.FC = () => {
             />
           </div>
 
+          {/* Live Sessions Widget */}
+          <LiveSessionsWidget isTutor={!!isTutor} />
+
           {/* Tutor Portal Banner — visible only to tutors */}
           {isTutor && (
             <div className="mt-8 rounded-xl border border-primary-900/20 bg-primary-900/5 p-6">
@@ -246,13 +252,21 @@ const DashboardPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <Link
-                  to="/tutor/upload"
-                  className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-primary-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800"
-                >
-                  Upload Course Content
-                  <ArrowRight size={16} />
-                </Link>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link
+                    to="/live"
+                    className="inline-flex items-center gap-2 rounded-lg border border-primary-900 px-4 py-2 text-sm font-semibold text-primary-900 transition hover:bg-primary-900 hover:text-white"
+                  >
+                    <Radio size={15} /> Start Live Session
+                  </Link>
+                  <Link
+                    to="/tutor/upload"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800"
+                  >
+                    Upload Course Content
+                    <ArrowRight size={16} />
+                  </Link>
+                </div>
               </div>
             </div>
           )}
@@ -268,6 +282,84 @@ const DashboardPage: React.FC = () => {
       </div>
 
       <AppFooter />
+    </div>
+  );
+};
+
+// ── Live Sessions Widget ──────────────────────────────────────────────────────
+interface LiveSessionsWidgetProps { isTutor: boolean }
+const LiveSessionsWidget: React.FC<LiveSessionsWidgetProps> = ({ isTutor }) => {
+  const { user, isAuthenticated } = useAuthStore();
+  // Students see all sessions; tutors see their own hosted sessions
+  // enabled guard prevents firing before auth is fully initialised
+  const { data: sessions = [], isLoading } = useQuery<LiveSession[]>({
+    queryKey: isTutor ? ['hosted-sessions'] : ['live-sessions-widget'],
+    queryFn: isTutor ? tutorApi.getHostedSessions : tutorApi.getAllLiveSessions,
+    refetchInterval: 30_000,
+    enabled: isAuthenticated && !!user,
+  });
+  const liveSessions = sessions.filter((s) => s.status === 'live');
+
+  return (
+    <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Video size={17} className="text-primary-900" />
+          <h3 className="font-bold text-slate-900">Live Sessions</h3>
+          {liveSessions.length > 0 && (
+            <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-bold text-white">
+              {liveSessions.length} Live
+            </span>
+          )}
+        </div>
+        <Link to="/live" className="flex items-center gap-1 text-xs font-medium text-primary-900 hover:underline">
+          {isTutor ? 'Manage Sessions' : 'View All'} <ArrowRight size={12} />
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => <div key={i} className="h-14 animate-pulse rounded-lg bg-slate-100" />)}
+        </div>
+      ) : liveSessions.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <Radio size={28} className="text-slate-300" />
+          <p className="text-sm text-slate-400">
+            {isTutor ? 'No active sessions. Start one from Live Sessions.' : 'No sessions are live right now. Check back later!'}
+          </p>
+          <Link to="/live" className="mt-1 rounded-lg bg-primary-900/5 px-4 py-1.5 text-xs font-semibold text-primary-900 hover:bg-primary-900/10 transition">
+            {isTutor ? 'Start a Session' : 'Browse Scheduled Sessions'}
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {liveSessions.slice(0, 3).map((session) => {
+            const hostObj = typeof session.hostId === 'object' && session.hostId !== null
+              ? (session.hostId as { profile: { firstName: string; lastName?: string; avatar?: string }; email: string })
+              : null;
+            const hostName = hostObj
+              ? `${hostObj.profile.firstName} ${hostObj.profile.lastName ?? ''}`.trim()
+              : 'Tutor';
+            return (
+              <div key={session._id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 truncate max-w-xs">{session.title}</p>
+                    <p className="text-xs text-slate-400">by {hostName}</p>
+                  </div>
+                </div>
+                <Link
+                  to="/live"
+                  className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+                >
+                  Join
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
