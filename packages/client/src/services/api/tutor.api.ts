@@ -60,6 +60,16 @@ export interface UploadProgress {
   percentage: number;
 }
 
+/** Returned by GET /videos/sign-upload — used for direct browser→Cloudinary uploads. */
+export interface VideoUploadSignature {
+  signature: string;
+  timestamp: number;
+  publicId: string;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+}
+
 export const tutorApi = {
   /** Fetch all courses belonging to the authenticated tutor */
   getTutorCourses: async (): Promise<Course[]> => {
@@ -148,6 +158,77 @@ export const tutorApi = {
     });
 
     return response.data.data.videos;
+  },
+
+  // ── Direct Cloudinary upload (fast path) ──────────────────────────────────
+
+  /**
+   * Step 1 of 3: Ask the server for a signed Cloudinary upload signature.
+   * No binary data is involved — this is just a tiny JSON request.
+   */
+  getVideoUploadSignature: async (): Promise<VideoUploadSignature> => {
+    return apiClient.get<VideoUploadSignature>('/videos/sign-upload');
+  },
+
+  /**
+   * Step 2 of 3: Upload the file DIRECTLY to Cloudinary CDN using the signature.
+   * The binary never touches your own server — this is the fast path.
+   * Uses XMLHttpRequest so we get real upload-progress events.
+   */
+  uploadVideoDirectly: (
+    file: File,
+    sig: VideoUploadSignature,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<{ cloudinaryId: string; secureUrl: string }> => {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', sig.apiKey);
+      formData.append('timestamp', String(sig.timestamp));
+      formData.append('signature', sig.signature);
+      formData.append('folder', sig.folder);
+      formData.append('public_id', sig.publicId);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${sig.cloudName}/video/upload`);
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (evt) => {
+          if (evt.lengthComputable) {
+            onProgress({
+              loaded: evt.loaded,
+              total: evt.total,
+              percentage: Math.round((evt.loaded * 100) / evt.total),
+            });
+          }
+        });
+      }
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText) as { public_id: string; secure_url: string };
+          resolve({ cloudinaryId: data.public_id, secureUrl: data.secure_url });
+        } else {
+          reject(new Error(`Cloudinary upload failed (${xhr.status}): ${xhr.statusText}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error during Cloudinary upload'));
+      xhr.send(formData);
+    });
+  },
+
+  /**
+   * Step 3 of 3: Tell the server to save the Cloudinary metadata to MongoDB.
+   * Returns the videoId that can be linked to a course lesson.
+   */
+  confirmVideoUpload: async (data: {
+    cloudinaryId: string;
+    secureUrl: string;
+    originalName: string;
+    size: number;
+    mimetype: string;
+  }): Promise<UploadedVideo> => {
+    return apiClient.post<UploadedVideo>('/videos/confirm', data);
   },
 
   /**

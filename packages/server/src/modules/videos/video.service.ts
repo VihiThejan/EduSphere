@@ -26,8 +26,7 @@ function uploadToCloudinary(
         resource_type: 'video',
         folder,
         public_id: publicId,
-        eager: [{ streaming_profile: 'hd', format: 'm3u8' }],
-        eager_async: true,
+        // No eager transformations — raw storage is near-instant
       },
       (error, result) => {
         if (error || !result) return reject(error ?? new Error('Cloudinary upload failed'));
@@ -127,6 +126,54 @@ export class VideoService {
 
   async getUserVideos(userId: string): Promise<IVideo[]> {
     return VideoModel.find({ uploadedBy: userId }).sort({ createdAt: -1 });
+  }
+
+  // ── Direct upload helpers ─────────────────────────────────────────────────
+
+  /**
+   * Generate a signed upload signature so the browser can POST directly to
+   * Cloudinary without routing the binary through this server.
+   */
+  generateUploadSignature(userId: string): {
+    signature: string;
+    timestamp: number;
+    publicId: string;
+    apiKey: string;
+    cloudName: string;
+    folder: string;
+  } {
+    const timestamp = Math.round(Date.now() / 1000);
+    const publicId = `video-${userId}-${timestamp}`;
+    const folder = this.folder;
+
+    const paramsToSign: Record<string, string | number> = { folder, public_id: publicId, timestamp };
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, config.cloudinary.apiSecret);
+
+    return { signature, timestamp, publicId, apiKey: config.cloudinary.apiKey, cloudName: config.cloudinary.cloudName, folder };
+  }
+
+  /**
+   * Called after the browser finishes a direct Cloudinary upload.
+   * Saves only the metadata returned by Cloudinary to MongoDB.
+   */
+  async confirmVideoUpload(data: {
+    cloudinaryId: string;
+    secureUrl: string;
+    originalName: string;
+    size: number;
+    mimetype: string;
+    userId: string;
+  }): Promise<IVideo> {
+    return VideoModel.create({
+      filename:     data.cloudinaryId,
+      originalName: data.originalName,
+      cloudinaryId: data.cloudinaryId,
+      cloudUrl:     data.secureUrl,
+      mimetype:     data.mimetype,
+      size:         data.size,
+      uploadedBy:   data.userId,
+      status:       VIDEO_STATUS.READY,
+    });
   }
 }
 

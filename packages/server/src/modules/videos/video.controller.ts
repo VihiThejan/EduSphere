@@ -144,6 +144,63 @@ export class VideoController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/v1/videos/sign-upload
+   * Returns a Cloudinary signed-upload signature so the browser can upload
+   * the binary directly to Cloudinary CDN (skipping this server entirely).
+   */
+  async signUpload(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const signData = videoService.generateUploadSignature(userId);
+      res.json({ success: true, data: signData });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/v1/videos/confirm
+   * Called by the browser after a successful direct Cloudinary upload.
+   * Saves Cloudinary metadata to MongoDB and returns the videoId.
+   */
+  async confirmUpload(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const { cloudinaryId, secureUrl, originalName, size, mimetype } = req.body as {
+        cloudinaryId: string;
+        secureUrl: string;
+        originalName: string;
+        size: number;
+        mimetype: string;
+      };
+
+      if (!cloudinaryId || !secureUrl || !originalName) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Missing required fields', statusCode: 400 },
+        });
+        return;
+      }
+
+      const video = await videoService.confirmVideoUpload({ cloudinaryId, secureUrl, originalName, size, mimetype, userId });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          videoId: video._id,
+          filename: video.filename,
+          originalName: video.originalName,
+          size: video.size,
+          cloudUrl: video.cloudUrl,
+          status: video.status,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const videoController = new VideoController();

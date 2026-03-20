@@ -269,9 +269,10 @@ const TutorUploadPage: React.FC = () => {
   );
 
   /**
-   * Upload one or more video files.
-   * - Single file  → POST /videos/upload      (individual progress)
-   * - Multiple files → POST /videos/upload/bulk (combined progress, one request)
+   * Upload one or more video files using direct Cloudinary upload (fast path).
+   * Flow: get signature → POST directly to Cloudinary CDN → confirm metadata with server.
+   * Single file  → individual progress entry
+   * Multiple files → combined progress entry, then split into per-file entries on finish
    */
   const uploadVideos = useCallback(
     async (files: File[]) => {
@@ -288,11 +289,25 @@ const TutorUploadPage: React.FC = () => {
         ]);
 
         try {
-          const result = await tutorApi.uploadVideo(file, (p) => {
+          // Step 1: get Cloudinary signature (tiny JSON request)
+          const sig = await tutorApi.getVideoUploadSignature();
+
+          // Step 2: upload directly to Cloudinary CDN — progress reflects actual CDN transfer
+          const cloudData = await tutorApi.uploadVideoDirectly(file, sig, (p) => {
             setUploadedFiles((prev) =>
               prev.map((f) => (f.id === localId ? { ...f, progress: p.percentage } : f))
             );
           });
+
+          // Step 3: save metadata to DB
+          const result = await tutorApi.confirmVideoUpload({
+            cloudinaryId: cloudData.cloudinaryId,
+            secureUrl: cloudData.secureUrl,
+            originalName: file.name,
+            size: file.size,
+            mimetype: file.type,
+          });
+
           setUploadedFiles((prev) =>
             prev.map((f) =>
               f.id === localId ? { ...f, remoteId: result.videoId, progress: 100, status: 'done' } : f
@@ -307,7 +322,7 @@ const TutorUploadPage: React.FC = () => {
           addToast('error', `Failed to upload ${file.name}`);
         }
       } else {
-        // Bulk – one combined progress entry covering all files
+        // Bulk – one combined progress entry; files upload in parallel directly to Cloudinary
         const bulkId = generateId();
         const totalSize = files.reduce((s, f) => s + f.size, 0);
         const label = `${files.length} videos (bulk upload)`;
@@ -317,12 +332,37 @@ const TutorUploadPage: React.FC = () => {
           { id: bulkId, name: label, size: totalSize, kind: 'video', progress: 0, status: 'uploading' },
         ]);
 
+        // Track per-file loaded bytes for a combined progress bar
+        const loadedPerFile = new Array<number>(files.length).fill(0);
+
         try {
-          const results = await tutorApi.uploadVideosBulk(files, (p) => {
-            setUploadedFiles((prev) =>
-              prev.map((f) => (f.id === bulkId ? { ...f, progress: p.percentage } : f))
-            );
-          });
+          const results = await Promise.all(
+            files.map((file, i) =>
+              tutorApi.getVideoUploadSignature()
+                .then((sig) =>
+                  tutorApi.uploadVideoDirectly(file, sig, (p) => {
+                    loadedPerFile[i] = p.loaded;
+                    const totalLoaded = loadedPerFile.reduce((a, b) => a + b, 0);
+                    setUploadedFiles((prev) =>
+                      prev.map((f) =>
+                        f.id === bulkId
+                          ? { ...f, progress: Math.round((totalLoaded * 100) / totalSize) }
+                          : f
+                      )
+                    );
+                  })
+                )
+                .then((cloudData) =>
+                  tutorApi.confirmVideoUpload({
+                    cloudinaryId: cloudData.cloudinaryId,
+                    secureUrl: cloudData.secureUrl,
+                    originalName: file.name,
+                    size: file.size,
+                    mimetype: file.type,
+                  })
+                )
+            )
+          );
 
           // Replace the single bulk entry with one entry per uploaded video
           setUploadedFiles((prev) => {
@@ -350,7 +390,7 @@ const TutorUploadPage: React.FC = () => {
         }
       }
     },
-    [courseId, addToast]
+    [addToast]
   );
 
   // ---- File validation ----
@@ -450,7 +490,25 @@ const TutorUploadPage: React.FC = () => {
     createCourseMutation.mutate();
   };
 
-  const handleStep2Next = () => setStep(3);
+  const handleStep2Next = () => {
+    const doneFiles = uploadedFiles.filter((f) => f.status === 'done');
+    const uploading  = uploadedFiles.some((f) => f.status === 'uploading');
+
+    if (uploading) {
+      addToast('error', 'Please wait — files are still uploading.');
+      return;
+    }
+    if (doneFiles.length === 0) {
+      addToast('error', 'Upload at least one video or document before continuing.');
+      return;
+    }
+    const hasVideo = doneFiles.some((f) => f.kind === 'video');
+    if (!hasVideo) {
+      addToast('error', 'At least one video lesson is required to create a course.');
+      return;
+    }
+    setStep(3);
+  };
 
   const tutorName = user?.profile?.firstName
     ? `${user.profile.firstName} ${user.profile.lastName ?? ''}`.trim()
@@ -928,13 +986,49 @@ const TutorUploadPage: React.FC = () => {
                   <span className="material-symbols-outlined text-base">arrow_back</span>
                   Back
                 </button>
-                <button
-                  onClick={handleStep2Next}
-                  className="px-8 py-2.5 rounded-lg bg-primary-900 text-white font-bold text-sm hover:bg-primary-800 shadow-lg shadow-primary-900/20 transition flex items-center gap-2"
-                >
-                  Continue to Pricing
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </button>
+                {(() => {
+                  const hasVideo   = uploadedFiles.some((f) => f.kind === 'video' && f.status === 'done');
+                  const isUploading = uploadedFiles.some((f) => f.status === 'uploading');
+                  const canProceed  = hasVideo && !isUploading;
+                  return (
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={handleStep2Next}
+                        disabled={!canProceed}
+                        title={
+                          isUploading
+                            ? 'Wait for uploads to finish'
+                            : !hasVideo
+                            ? 'Upload at least one video lesson to continue'
+                            : ''
+                        }
+                        className={`px-8 py-2.5 rounded-lg font-bold text-sm transition flex items-center gap-2
+                          ${canProceed
+                            ? 'bg-primary-900 text-white hover:bg-primary-800 shadow-lg shadow-primary-900/20'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          }`}
+                      >
+                        {isUploading ? (
+                          <>
+                            <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                            Uploading…
+                          </>
+                        ) : (
+                          <>
+                            Continue to Pricing
+                            <span className="material-symbols-outlined text-base">arrow_forward</span>
+                          </>
+                        )}
+                      </button>
+                      {!hasVideo && !isUploading && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">info</span>
+                          At least one video lesson is required
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </section>
           )}
