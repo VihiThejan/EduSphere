@@ -7,10 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "npm run build:shared && concurrently \"npm run dev:shared\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:shared": "npm run dev --workspace=@edusphere/shared",
     "dev:server": "npm run dev --workspace=@edusphere/server",
     "dev:client": "npm run dev --workspace=@edusphere/client",
     "build": "npm run build --workspaces",
+    "build:shared": "npm run build --workspace=@edusphere/shared",
     "build:server": "npm run build --workspace=@edusphere/server",
     "build:client": "npm run build --workspace=@edusphere/client",
     "test": "npm run test --workspaces",
