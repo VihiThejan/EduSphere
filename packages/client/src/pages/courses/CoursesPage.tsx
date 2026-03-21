@@ -149,6 +149,18 @@ const CoursesPage: React.FC = () => {
       return;
     }
 
+    const selectedCourse = cards.find((item) => item.course._id === courseId)?.course;
+    if (!selectedCourse) {
+      setFeedbackMessage('Course details are unavailable right now. Please try again.');
+      return;
+    }
+
+    const courseAmount = selectedCourse.pricing.discountPrice ?? selectedCourse.pricing.amount;
+    if (courseAmount > 0) {
+      navigate(`/checkout?courseId=${encodeURIComponent(courseId)}`);
+      return;
+    }
+
     enrollMutation.mutate(courseId);
   };
 

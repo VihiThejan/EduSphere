@@ -83,11 +83,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 {userMeta ? <p className="text-xs text-slate-500">{userMeta}</p> : null}
               </div>
             ) : null}
-            <img
-              src={avatarUrl || defaultAvatar}
-              alt="User avatar"
-              className="h-10 w-10 rounded-full border-2 border-primary-900/20 object-cover"
-            />
+            <Link to="/dashboard" aria-label="Go to dashboard" className="inline-flex">
+              <img
+                src={avatarUrl || defaultAvatar}
+                alt="User avatar"
+                className="h-10 w-10 rounded-full border-2 border-primary-900/20 object-cover"
+              />
+            </Link>
             {onLogout ? (
               <button
                 type="button"

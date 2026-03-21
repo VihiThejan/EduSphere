@@ -10,6 +10,25 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
+  if (error instanceof SyntaxError && 'body' in error) {
+    logger.error(`Invalid JSON payload: ${error.message}`, {
+      path: req.path,
+      method: req.method,
+    });
+
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: 'Invalid JSON payload',
+        statusCode: 400,
+      },
+    };
+
+    res.status(400).json(response);
+    return;
+  }
+
   if (error instanceof AppError) {
     // Operational errors - send to client
     logger.error(`Operational error: ${error.message}`, {

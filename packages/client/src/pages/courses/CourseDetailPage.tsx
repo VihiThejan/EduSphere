@@ -117,6 +117,21 @@ const CourseDetailPage: React.FC = () => {
     enabled: !!courseId,
   });
 
+  const { data: enrollmentStatus } = useQuery({
+    queryKey: ['course-enrollment-status', courseId, user?._id],
+    queryFn: () => coursesApi.checkEnrollment(courseId!),
+    enabled: !!courseId && isAuthenticated,
+    retry: false,
+  });
+
+  React.useEffect(() => {
+    if (enrollmentStatus) {
+      setEnrolled(enrollmentStatus.isEnrolled);
+    } else if (!isAuthenticated) {
+      setEnrolled(false);
+    }
+  }, [enrollmentStatus, isAuthenticated]);
+
   // ── enroll mutation ────────────────────────────────────────────────────────
 
   const enrollMutation = useMutation({
@@ -125,6 +140,7 @@ const CourseDetailPage: React.FC = () => {
       setEnrolled(true);
       setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
       void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['course-enrollment-status', courseId, user?._id] });
     },
     onError: () => {
       setFeedbackMessage('Unable to enroll right now. Please try again.');
@@ -140,6 +156,12 @@ const CourseDetailPage: React.FC = () => {
       setFeedbackMessage('Only student accounts can enroll in courses.');
       return;
     }
+
+    if (!isFree) {
+      navigate(`/checkout?courseId=${encodeURIComponent(courseId ?? '')}`);
+      return;
+    }
+
     enrollMutation.mutate();
   };
 

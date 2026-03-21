@@ -6,7 +6,7 @@ import {
   ConflictError,
   NotFoundError,
 } from '../../shared/utils/errors.js';
-import { UserRole, DecodedToken } from '@edusphere/shared';
+import { UserRole, DecodedToken, USER_ROLES } from '@edusphere/shared';
 
 export interface RegisterInput {
   email: string;
@@ -28,8 +28,10 @@ export interface AuthTokens {
 
 export class AuthService {
   async register(input: RegisterInput): Promise<{ user: IUser; tokens: AuthTokens }> {
+    const normalizedEmail = input.email.trim().toLowerCase();
+
     // Check if user already exists
-    const existingUser = await UserModel.findOne({ email: input.email });
+    const existingUser = await UserModel.findOne({ email: normalizedEmail });
     if (existingUser) {
       throw new ConflictError('User with this email already exists');
     }
@@ -39,9 +41,9 @@ export class AuthService {
 
     // Create user
     const user = await UserModel.create({
-      email: input.email,
+      email: normalizedEmail,
       passwordHash,
-      roles: input.roles || ['student'],
+      roles: input.roles && input.roles.length > 0 ? input.roles : [USER_ROLES.STUDENT],
       profile: {
         firstName: input.firstName,
         lastName: input.lastName,
@@ -58,8 +60,12 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<{ user: IUser; tokens: AuthTokens }> {
-    // Find user with password
-    const user = await UserModel.findOne({ email: input.email }).select('+passwordHash');
+    const normalizedEmail = input.email.trim().toLowerCase();
+
+    // Find user with password and refresh token list used by addRefreshToken.
+    const user = await UserModel.findOne({ email: normalizedEmail }).select(
+      '+passwordHash +refreshTokens'
+    );
     if (!user) {
       throw new AuthenticationError('Invalid email or password');
     }

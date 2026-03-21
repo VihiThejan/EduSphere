@@ -8,8 +8,45 @@ export interface CourseCatalogParams extends CourseFilters {
   limit?: number;
 }
 
+interface CourseEnrollmentStatus {
+  isEnrolled: boolean;
+}
+
 const asCourses = mockCourses as unknown as Course[];
 const asLessonsByCourse = mockLessonsByCourse as unknown as Record<string, Lesson[]>;
+export const MOCK_ENROLLMENTS_STORAGE_KEY = 'mock-course-enrollments';
+
+export const isMongoObjectId = (value: string): boolean => /^[a-f\d]{24}$/i.test(value);
+
+export const getMockEnrollmentIds = (): string[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(MOCK_ENROLLMENTS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+export const setMockEnrollmentIds = (ids: string[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(MOCK_ENROLLMENTS_STORAGE_KEY, JSON.stringify(ids));
+};
+
+export const isMockCourseId = (courseId: string): boolean => {
+  return !isMongoObjectId(courseId) || asCourses.some((course) => course._id === courseId);
+};
 
 const applyFilters = (courses: Course[], params: CourseCatalogParams): Course[] => {
   return courses.filter((course) => {
@@ -111,6 +148,31 @@ export const coursesApi = {
   },
 
   enrollInCourse: async (courseId: string): Promise<{ enrollment: { _id: string } }> => {
+    if (isMockCourseId(courseId)) {
+      const ids = getMockEnrollmentIds();
+
+      if (!ids.includes(courseId)) {
+        ids.push(courseId);
+        setMockEnrollmentIds(ids);
+      }
+
+      return {
+        enrollment: {
+          _id: `mock-enrollment-${courseId}`,
+        },
+      };
+    }
+
     return apiClient.post<{ enrollment: { _id: string } }>(`/enrollments/courses/${courseId}/enroll`);
+  },
+
+  checkEnrollment: async (courseId: string): Promise<CourseEnrollmentStatus> => {
+    if (isMockCourseId(courseId)) {
+      return {
+        isEnrolled: getMockEnrollmentIds().includes(courseId),
+      };
+    }
+
+    return apiClient.get<CourseEnrollmentStatus>(`/enrollments/courses/${courseId}/check`);
   },
 };

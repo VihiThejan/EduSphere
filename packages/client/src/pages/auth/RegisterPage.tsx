@@ -18,13 +18,19 @@ const RegisterPage: React.FC = () => {
     formState: { errors },
   } = useForm<UserRegisterInput>({
     resolver: zodResolver(userRegisterSchema),
+    defaultValues: {
+      roles: [USER_ROLES.STUDENT],
+    },
   });
 
   const onSubmit = async (data: UserRegisterInput) => {
     try {
       setIsLoading(true);
       setError('');
-      const response = await authApi.register(data);
+      const response = await authApi.register({
+        ...data,
+        email: data.email.trim().toLowerCase(),
+      });
       login(response.accessToken, response.user);
       navigate('/dashboard');
     } catch (err: any) {

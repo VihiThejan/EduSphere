@@ -34,10 +34,17 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError<ApiResponse>) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
         // If 401 and not already retried, try to refresh token
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (
+          error.response?.status === 401 &&
+          originalRequest &&
+          !originalRequest._retry &&
+          !originalRequest.url?.includes('/auth/refresh') &&
+          !originalRequest.url?.includes('/auth/login') &&
+          !originalRequest.url?.includes('/auth/register')
+        ) {
           originalRequest._retry = true;
 
           try {
@@ -53,9 +60,8 @@ class ApiClient {
               return this.client(originalRequest);
             }
           } catch (refreshError) {
-            // Refresh failed, clear token and redirect to login
+            // Refresh failed, clear token and let route guards/UI handle redirect.
             this.clearAccessToken();
-            window.location.href = '/login';
             return Promise.reject(refreshError);
           }
         }

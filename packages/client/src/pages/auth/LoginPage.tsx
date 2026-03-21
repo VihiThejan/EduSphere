@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { userLoginSchema, UserLoginInput } from '@edusphere/shared';
 import { authApi } from '@/services/api/auth.api';
 import { useAuthStore } from '@/store/authStore';
+import { AUTH_SESSION_HINT_KEY } from '@/store/authStore';
+import { apiClient } from '@/services/api/client';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,10 +23,17 @@ const LoginPage: React.FC = () => {
   });
 
   const onSubmit = async (data: UserLoginInput) => {
+    if (isLoading) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError('');
-      const response = await authApi.login(data);
+      const response = await authApi.login({
+        ...data,
+        email: data.email.trim().toLowerCase(),
+      });
       login(response.accessToken, response.user);
       navigate('/dashboard');
     } catch (err: any) {
@@ -33,6 +42,12 @@ const LoginPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    apiClient.clearAccessToken();
+    window.localStorage.removeItem('auth-storage');
+    window.localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
