@@ -14,3 +14,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - JWT authentication: 15-min access tokens with 7-day HTTP-only refresh token rotation
 - Theft detection via refresh token families
 - Account lockout after 5 failed login attempts
+- Email verification with Nodemailer and secure token expiry
+- Forgot password and reset password flows
+- Zustand auth store with persist middleware on the client
