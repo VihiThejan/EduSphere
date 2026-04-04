@@ -24,3 +24,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Course catalog with filters: category, level, price range, search
 - Course detail page with full lesson tree and instructor info
 - Paginated course listing with React Query
+- Video player with watch-progress tracking (saves every 10 s)
+- Auto-complete lesson at 90% watch threshold
+- PDF and Word document download from lessons
