@@ -27,3 +27,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Video player with watch-progress tracking (saves every 10 s)
 - Auto-complete lesson at 90% watch threshold
 - PDF and Word document download from lessons
+- Cloudinary signed-URL direct upload for tutor video lessons
+- 3-step course creation wizard with live preview
+- Drag-and-drop lesson reordering in the wizard
