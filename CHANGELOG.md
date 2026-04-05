@@ -30,3 +30,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Cloudinary signed-URL direct upload for tutor video lessons
 - 3-step course creation wizard with live preview
 - Drag-and-drop lesson reordering in the wizard
+- Enrollment system: enroll, drop, and re-enroll in courses
+- Per-lesson and per-course progress persistence in MongoDB
+- My Learning page listing enrolled courses with progress bars
