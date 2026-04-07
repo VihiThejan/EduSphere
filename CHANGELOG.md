@@ -33,3 +33,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Enrollment system: enroll, drop, and re-enroll in courses
 - Per-lesson and per-course progress persistence in MongoDB
 - My Learning page listing enrolled courses with progress bars
+- Stripe, Cloudinary, and Jitsi Meet added as core third-party integrations
+- Nodemailer configured for transactional email delivery
+- bcryptjs for password hashing, Mongoose for ODM layer
