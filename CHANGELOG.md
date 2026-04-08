@@ -36,3 +36,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stripe, Cloudinary, and Jitsi Meet added as core third-party integrations
 - Nodemailer configured for transactional email delivery
 - bcryptjs for password hashing, Mongoose for ODM layer
+- Marketplace listing browse with type, price, campus, condition filters
+- Item detail page with image gallery and Google Maps pickup pin
+- Similar listings carousel on item detail page
