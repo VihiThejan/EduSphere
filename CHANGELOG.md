@@ -39,3 +39,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Marketplace listing browse with type, price, campus, condition filters
 - Item detail page with image gallery and Google Maps pickup pin
 - Similar listings carousel on item detail page
+- Seller onboarding flow with shop profile creation
+- Seller listings CRUD: create, edit, publish, unpublish, delete
+- Publish gated by active vendor subscription and listing quota
