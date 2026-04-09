@@ -42,3 +42,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Seller onboarding flow with shop profile creation
 - Seller listings CRUD: create, edit, publish, unpublish, delete
 - Publish gated by active vendor subscription and listing quota
+
+## [0.3.0] - 2026-04-15
+
+### Added
+- Shopping cart: add, update, remove, clear, and validate items
+- Stripe Elements checkout page with payment intent creation
+- Order confirmation page and order detail view
