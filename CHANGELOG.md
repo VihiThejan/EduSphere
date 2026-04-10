@@ -49,3 +49,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Shopping cart: add, update, remove, clear, and validate items
 - Stripe Elements checkout page with payment intent creation
 - Order confirmation page and order detail view
+- Jitsi Meet live sessions with iframe embed (no API key required)
+- Tutors can create and end sessions; students can view and join
+- In-session Q&A: ask, answer, and upvote questions
