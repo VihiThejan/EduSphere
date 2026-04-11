@@ -56,3 +56,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Continue-learning widget showing last-accessed course
 - Recommended courses section and live sessions widget
 - Study streak tracker with daily activity detection
+
+### Fixed
+- `getMyOrders` and `getSellerOrders` now wrap results in the `ApiResponse` envelope
+- Resolved `Cannot read properties of undefined (reading .pages)` crash in SellerOrdersPage
