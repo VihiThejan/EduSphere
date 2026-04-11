@@ -52,3 +52,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Jitsi Meet live sessions with iframe embed (no API key required)
 - Tutors can create and end sessions; students can view and join
 - In-session Q&A: ask, answer, and upvote questions
+- Student dashboard: active courses, completed lessons, and avg progress stats
+- Continue-learning widget showing last-accessed course
+- Recommended courses section and live sessions widget
+- Study streak tracker with daily activity detection
