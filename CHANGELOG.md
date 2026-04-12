@@ -60,3 +60,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - `getMyOrders` and `getSellerOrders` now wrap results in the `ApiResponse` envelope
 - Resolved `Cannot read properties of undefined (reading .pages)` crash in SellerOrdersPage
+- Admin service: getPlatformStats, getUsers, updateUserRoles, toggleUserSuspension
+- Admin endpoints for sellers verification and listings removal
+- All admin routes guarded by authorize([ADMIN]) middleware
