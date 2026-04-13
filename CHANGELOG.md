@@ -63,3 +63,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Admin service: getPlatformStats, getUsers, updateUserRoles, toggleUserSuspension
 - Admin endpoints for sellers verification and listings removal
 - All admin routes guarded by authorize([ADMIN]) middleware
+- Admin dashboard with platform-wide KPIs (users, revenue, listings, orders)
+- Users page with inline role editor and suspend/unsuspend controls
+- Sellers page with verification status management
+- Listings page with removal confirmation dialog
+- Orders page with fulfilment status overview
