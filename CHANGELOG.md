@@ -68,3 +68,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Sellers page with verification status management
 - Listings page with removal confirmation dialog
 - Orders page with fulfilment status overview
+
+## [0.4.0] - 2026-04-22
+
+### Added
+- Tiered vendor subscription plans: Starter (5 listings), Pro (20), Elite (100)
+- VendorPlan and VendorSubscription Mongoose models
+- Vendor billing service with subscription status checks and quota enforcement
