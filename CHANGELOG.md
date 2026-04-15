@@ -75,3 +75,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Tiered vendor subscription plans: Starter (5 listings), Pro (20), Elite (100)
 - VendorPlan and VendorSubscription Mongoose models
 - Vendor billing service with subscription status checks and quota enforcement
+- Stripe Checkout session creation for vendor plan upgrades
+- checkout.session.completed webhook activates 30-day subscription window
+- SellerBillingPage with plan cards and current subscription status display
