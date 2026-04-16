@@ -5,6 +5,7 @@ export const lessonCreateSchema = z.object({
   description: z.string().max(1000).optional(),
   order: z.number().int().min(1, 'Order must be at least 1'),
   videoId: z.string().optional(),
+  documentIds: z.array(z.string()).optional(),
   content: z.string().max(10000).optional(),
   isFree: z.boolean().default(false),
 });
@@ -14,6 +15,7 @@ export const lessonUpdateSchema = z.object({
   description: z.string().max(1000).optional(),
   order: z.number().int().min(1).optional(),
   videoId: z.string().optional(),
+  documentIds: z.array(z.string()).optional(),
   content: z.string().max(10000).optional(),
   isFree: z.boolean().optional(),
 });

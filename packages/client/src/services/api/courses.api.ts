@@ -82,13 +82,13 @@ export const coursesApi = {
     };
 
     try {
-      const response = await apiClient.get<Course>(`/courses/${courseId}`);
+      const response = await apiClient.get<{ course: Course }>(`/courses/${courseId}`);
 
-      if (!response?._id) {
+      if (!response?.course?._id) {
         return fallback();
       }
 
-      return response;
+      return response.course;
     } catch {
       return fallback();
     }
@@ -98,13 +98,14 @@ export const coursesApi = {
     const fallback = () => [...(asLessonsByCourse[courseId] ?? [])].sort((a, b) => a.order - b.order);
 
     try {
-      const response = await apiClient.get<Lesson[]>(`/courses/${courseId}/lessons`);
+      const response = await apiClient.get<{ lessons: Lesson[] }>(`/courses/${courseId}/lessons`);
 
-      if (!response || response.length === 0) {
+      const lessons = response?.lessons;
+      if (!lessons || lessons.length === 0) {
         return fallback();
       }
 
-      return [...response].sort((a, b) => a.order - b.order);
+      return [...lessons].sort((a, b) => a.order - b.order);
     } catch {
       return fallback();
     }
@@ -112,5 +113,14 @@ export const coursesApi = {
 
   enrollInCourse: async (courseId: string): Promise<{ enrollment: { _id: string } }> => {
     return apiClient.post<{ enrollment: { _id: string } }>(`/enrollments/courses/${courseId}/enroll`);
+  },
+
+  checkEnrollment: async (courseId: string): Promise<boolean> => {
+    try {
+      const response = await apiClient.get<{ isEnrolled: boolean }>(`/enrollments/courses/${courseId}/check`);
+      return response?.isEnrolled ?? false;
+    } catch {
+      return false;
+    }
   },
 };

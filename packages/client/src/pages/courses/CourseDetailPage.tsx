@@ -4,9 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   BookOpen,
+  ChevronDown,
   ChevronRight,
   Clock,
   Clock3,
+  Download,
+  FileText,
   LayoutDashboard,
   ListChecks,
   Lock,
@@ -21,6 +24,7 @@ import { Course, Lesson, USER_ROLES } from '@edusphere/shared';
 import { AppFooter, AppHeader, AppNavItem, AppSidebar } from '@/components/common';
 import { coursesApi } from '@/services/api/courses.api';
 import { useAuthStore } from '@/store/authStore';
+import { config } from '@/config';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +78,7 @@ const CourseDetailPage: React.FC = () => {
 
   const [enrolled, setEnrolled] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null);
+  const [expandedLessonId, setExpandedLessonId] = React.useState<string | null>(null);
 
   const isStudent = !!user?.roles.includes(USER_ROLES.STUDENT);
 
@@ -117,6 +122,26 @@ const CourseDetailPage: React.FC = () => {
     enabled: !!courseId,
   });
 
+  // ── enrollment check on page load ──────────────────────────────────────────
+
+  const isOwner = !!(course && user && course.instructorId === user._id);
+
+  const { data: enrollmentStatus } = useQuery({
+    queryKey: ['enrollment-check', courseId],
+    queryFn: () => coursesApi.checkEnrollment(courseId!),
+    enabled: !!courseId && isAuthenticated && isStudent && !isOwner,
+  });
+
+  // Sync enrollment status from server
+  React.useEffect(() => {
+    if (enrollmentStatus === true) {
+      setEnrolled(true);
+    }
+  }, [enrollmentStatus]);
+
+  // Owner (tutor who created the course) always has full access
+  const hasFullAccess = enrolled || isOwner;
+
   // ── enroll mutation ────────────────────────────────────────────────────────
 
   const enrollMutation = useMutation({
@@ -125,6 +150,7 @@ const CourseDetailPage: React.FC = () => {
       setEnrolled(true);
       setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
       void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['enrollment-check', courseId] });
     },
     onError: () => {
       setFeedbackMessage('Unable to enroll right now. Please try again.');
@@ -159,38 +185,124 @@ const CourseDetailPage: React.FC = () => {
     </div>
   );
 
-  const renderLessonRow = (lesson: Lesson, index: number) => (
-    <div
-      key={lesson._id}
-      className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm"
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-900/10 text-sm font-bold text-primary-900">
-        {index + 1}
-      </span>
-      <div className="flex flex-1 flex-col">
-        <span className="text-sm font-semibold text-slate-800">{lesson.title}</span>
-        {lesson.description && (
-          <span className="text-xs text-slate-500">{lesson.description}</span>
+  const renderLessonRow = (lesson: Lesson, index: number) => {
+    const isExpanded = expandedLessonId === lesson._id;
+    const canAccess = hasFullAccess || lesson.isFree;
+    const video = lesson.video;
+    const documents = lesson.documents;
+    const videoUrl = video?.cloudUrl;
+
+    const handleLessonClick = () => {
+      if (!canAccess) return;
+      setExpandedLessonId(isExpanded ? null : lesson._id);
+    };
+
+    return (
+      <div key={lesson._id} className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={handleLessonClick}
+          className={`flex w-full items-center gap-4 px-4 py-3 text-left transition ${
+            canAccess ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default opacity-80'
+          } ${isExpanded ? 'bg-primary-900/5' : ''}`}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-900/10 text-sm font-bold text-primary-900">
+            {index + 1}
+          </span>
+          <div className="flex flex-1 flex-col">
+            <span className="text-sm font-semibold text-slate-800">{lesson.title}</span>
+            {lesson.description && (
+              <span className="text-xs text-slate-500">{lesson.description}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            {documents && documents.length > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
+                <FileText size={12} />
+                {documents.length} doc{documents.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {lesson.duration > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock size={12} />
+                {formatDuration(lesson.duration)}
+              </span>
+            )}
+            {lesson.isFree ? (
+              <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                <PlayCircle size={12} />
+                Preview
+              </span>
+            ) : !hasFullAccess ? (
+              <Lock size={13} className="text-slate-400" />
+            ) : null}
+            {canAccess && (
+              isExpanded ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />
+            )}
+          </div>
+        </button>
+
+        {/* Expanded content */}
+        {isExpanded && canAccess && (
+          <div className="border-t border-slate-100 px-4 py-4 bg-slate-50/50">
+            {/* Video Player */}
+            {videoUrl && (
+              <div className="mb-4">
+                <video
+                  key={videoUrl}
+                  controls
+                  controlsList="nodownload"
+                  className="w-full max-h-[480px] rounded-lg bg-black"
+                  src={videoUrl}
+                  preload="metadata"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            )}
+
+            {!videoUrl && (
+              <div className="mb-4 flex items-center justify-center rounded-lg bg-slate-100 py-12 text-slate-400">
+                <div className="flex flex-col items-center gap-1">
+                  <PlayCircle size={32} />
+                  <span className="text-sm">No video available for this lesson</span>
+                </div>
+              </div>
+            )}
+
+            {/* Documents / labsheets */}
+            {documents && documents.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Labsheets & Documents
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {documents.map((doc) => (
+                    <a
+                      key={doc._id}
+                      href={`${config.apiUrl}/documents/${doc._id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 hover:border-primary-900/30 hover:shadow-sm transition"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-red-100 text-red-600">
+                        <FileText size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{doc.originalName}</p>
+                        <p className="text-xs text-slate-400">{doc.mimetype === 'application/pdf' ? 'PDF' : 'Document'} · {(doc.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                      <Download size={16} className="text-slate-400 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
-      <div className="flex items-center gap-3 text-xs text-slate-500">
-        {lesson.duration > 0 && (
-          <span className="flex items-center gap-1">
-            <Clock size={12} />
-            {formatDuration(lesson.duration)}
-          </span>
-        )}
-        {lesson.isFree ? (
-          <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
-            <PlayCircle size={12} />
-            Preview
-          </span>
-        ) : (
-          <Lock size={13} className="text-slate-400" />
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   // ── main render ────────────────────────────────────────────────────────────
 
@@ -325,6 +437,32 @@ const CourseDetailPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* course preview video */}
+                  {(() => {
+                    const previewLesson = lessons && [...lessons].sort((a, b) => a.order - b.order).find((l) => l.isFree && l.video?.cloudUrl);
+                    const previewUrl = previewLesson?.video?.cloudUrl ?? null;
+                    if (!previewUrl) return null;
+                    return (
+                      <div className="rounded-xl border border-slate-100 bg-white px-6 py-5 shadow-sm">
+                        <h2 className="mb-3 text-base font-bold text-slate-800 flex items-center gap-2">
+                          <PlayCircle size={18} className="text-primary-900" />
+                          Course Preview
+                        </h2>
+                        <video
+                          controls
+                          controlsList="nodownload"
+                          className="w-full rounded-lg bg-black max-h-[420px]"
+                          src={previewUrl}
+                          poster={thumbnail}
+                          preload="metadata"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                        <p className="mt-2 text-xs text-slate-500">Free preview — {previewLesson!.title}</p>
+                      </div>
+                    );
+                  })()}
+
                   {/* lessons */}
                   <div className="rounded-xl border border-slate-100 bg-white px-6 py-5 shadow-sm">
                     <h2 className="mb-4 text-base font-bold text-slate-800">
@@ -369,7 +507,7 @@ const CourseDetailPage: React.FC = () => {
                     {feedbackMessage && (
                       <div
                         className={`mb-4 rounded-lg px-4 py-3 text-sm ${
-                          enrolled
+                          enrolled || isOwner
                             ? 'bg-emerald-50 text-emerald-700'
                             : 'bg-red-50 text-red-600'
                         }`}
@@ -378,13 +516,30 @@ const CourseDetailPage: React.FC = () => {
                       </div>
                     )}
 
-                    {enrolled ? (
-                      <Link
-                        to="/dashboard"
-                        className="block w-full rounded-xl bg-emerald-600 py-3 text-center text-sm font-bold text-white transition hover:bg-emerald-700"
-                      >
-                        Go to My Learning
-                      </Link>
+                    {isOwner ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                          You are the instructor of this course.
+                        </div>
+                        <Link
+                          to="/dashboard"
+                          className="block w-full rounded-xl bg-primary-900 py-3 text-center text-sm font-bold text-white transition hover:bg-primary-900/90"
+                        >
+                          Go to Dashboard
+                        </Link>
+                      </div>
+                    ) : enrolled ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                          You are enrolled in this course.
+                        </div>
+                        <Link
+                          to="/dashboard"
+                          className="block w-full rounded-xl bg-emerald-600 py-3 text-center text-sm font-bold text-white transition hover:bg-emerald-700"
+                        >
+                          Go to My Learning
+                        </Link>
+                      </div>
                     ) : (
                       <button
                         onClick={handleEnroll}
