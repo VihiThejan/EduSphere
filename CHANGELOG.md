@@ -78,3 +78,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Stripe Checkout session creation for vendor plan upgrades
 - checkout.session.completed webhook activates 30-day subscription window
 - SellerBillingPage with plan cards and current subscription status display
+
+### Fixed
+- Switched vendor billing from subscription mode (requires pre-created Price IDs) to payment mode with inline price_data
+- LKR amount now correctly multiplied by 100 for Stripe minor currency units
+- Added error banner to SellerBillingPage when checkout session creation fails
