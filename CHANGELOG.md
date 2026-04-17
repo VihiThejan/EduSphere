@@ -83,3 +83,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Switched vendor billing from subscription mode (requires pre-created Price IDs) to payment mode with inline price_data
 - LKR amount now correctly multiplied by 100 for Stripe minor currency units
 - Added error banner to SellerBillingPage when checkout session creation fails
+- POST /vendor-billing/verify-checkout retrieves the Stripe session and activates the subscription if payment_status is paid
+- Enables local development without running the Stripe CLI webhook daemon
+- Frontend stores checkoutSessionId in localStorage before redirect and calls verify on return
