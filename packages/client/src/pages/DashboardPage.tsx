@@ -23,6 +23,7 @@ import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/commo
 import { useAuthStore } from '@/store/authStore';
 import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
 import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
+import MyLearningSection from '@/components/dashboard/MyLearningSection';
 import StatsGrid from '@/components/dashboard/StatsGrid';
 import {
   DashboardRecommendation,
@@ -76,7 +77,7 @@ const DashboardPage: React.FC = () => {
   const primaryItems: AppNavItem[] = [
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '#', icon: Clock3 },
+    { label: 'My Learning', href: '#my-learning', icon: Clock3 },
     { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
     { label: 'Live Sessions', href: '/live', icon: Radio },
@@ -236,6 +237,9 @@ const DashboardPage: React.FC = () => {
 
           {/* Live Sessions Widget */}
           <LiveSessionsWidget isTutor={!!isTutor} />
+
+          {/* My Learning Section */}
+          <MyLearningSection />
 
           {/* Tutor Portal Banner — visible only to tutors */}
           {isTutor && (

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   BookOpen,
+  CheckCircle,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -79,6 +80,12 @@ const CourseDetailPage: React.FC = () => {
   const [enrolled, setEnrolled] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null);
   const [expandedLessonId, setExpandedLessonId] = React.useState<string | null>(null);
+  const [completedLessonIds, setCompletedLessonIds] = React.useState<Set<string>>(new Set());
+  const [markingLessonId, setMarkingLessonId] = React.useState<string | null>(null);
+  /** Store video refs keyed by lessonId for interval-based saves */
+  const videoRefs = React.useRef<Map<string, HTMLVideoElement>>(new Map());
+  /** Track active save intervals per lesson */
+  const saveIntervalsRef = React.useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   const isStudent = !!user?.roles.includes(USER_ROLES.STUDENT);
 
@@ -134,13 +141,142 @@ const CourseDetailPage: React.FC = () => {
 
   // Sync enrollment status from server
   React.useEffect(() => {
-    if (enrollmentStatus === true) {
+    if (enrollmentStatus?.isEnrolled && enrollmentStatus.status === 'active') {
       setEnrolled(true);
     }
   }, [enrollmentStatus]);
 
+  const enrollmentDbStatus = enrollmentStatus?.status ?? null;
+
   // Owner (tutor who created the course) always has full access
   const hasFullAccess = enrolled || isOwner;
+
+  // ── progress query (only when enrolled) ────────────────────────────────────
+
+  const { data: progressData } = useQuery({
+    queryKey: ['course-progress', courseId],
+    queryFn: () => coursesApi.getCourseProgress(courseId!),
+    enabled: !!courseId && enrolled && isStudent,
+  });
+
+  // Keep completedLessonIds in sync with server data
+  React.useEffect(() => {
+    if (progressData?.lessons) {
+      const ids = new Set(
+        progressData.lessons.filter((l) => l.isCompleted).map((l) => l._id)
+      );
+      setCompletedLessonIds(ids);
+    }
+  }, [progressData]);
+
+  const progressPercent = progressData?.enrollment.progressPercentage ?? 0;
+  const totalLessons = progressData?.course.totalLessons ?? 0;
+  const completedCount = completedLessonIds.size;
+
+  // ── mark lesson completed mutation ─────────────────────────────────────────
+
+  const markCompleteMutation = useMutation({
+    mutationFn: ({ lessonId }: { lessonId: string }) =>
+      coursesApi.markLessonCompleted(courseId!, lessonId),
+    onMutate: ({ lessonId }) => {
+      setMarkingLessonId(lessonId);
+    },
+    onSuccess: (_data, { lessonId }) => {
+      setCompletedLessonIds((prev) => new Set(prev).add(lessonId));
+      setMarkingLessonId(null);
+      // Refetch progress to get accurate percentage & auto-completion status
+      void queryClient.invalidateQueries({ queryKey: ['course-progress', courseId] });
+      void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
+    },
+    onError: () => {
+      setMarkingLessonId(null);
+    },
+  });
+
+  const handleMarkComplete = (lessonId: string) => {
+    if (completedLessonIds.has(lessonId) || markingLessonId === lessonId) return;
+    markCompleteMutation.mutate({ lessonId });
+  };
+
+  // ── watch progress save (fire-and-forget, every 10s) ───────────────────────
+
+  const saveWatchProgressMutation = useMutation({
+    mutationFn: (vars: { lessonId: string; watchedPosition: number; videoDuration: number }) =>
+      coursesApi.saveWatchProgress(courseId!, vars.lessonId, vars.watchedPosition, vars.videoDuration),
+    onSuccess: (data, vars) => {
+      // Always refresh course progress so the progress bar updates in real-time
+      void queryClient.invalidateQueries({ queryKey: ['course-progress', courseId] });
+      void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
+
+      if (data.autoCompleted) {
+        // Lesson was auto-completed by server (90% threshold)
+        setCompletedLessonIds((prev) => new Set(prev).add(vars.lessonId));
+        stopSaveInterval(vars.lessonId);
+        void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      }
+    },
+  });
+
+  const startSaveInterval = (lessonId: string) => {
+    // Don't start if already running or lesson already completed
+    if (saveIntervalsRef.current.has(lessonId) || completedLessonIds.has(lessonId)) return;
+
+    const interval = setInterval(() => {
+      const videoEl = videoRefs.current.get(lessonId);
+      if (!videoEl || videoEl.paused || videoEl.ended) return;
+
+      saveWatchProgressMutation.mutate({
+        lessonId,
+        watchedPosition: Math.floor(videoEl.currentTime),
+        videoDuration: Math.floor(videoEl.duration || 0),
+      });
+    }, 10_000); // every 10 seconds
+
+    saveIntervalsRef.current.set(lessonId, interval);
+  };
+
+  const stopSaveInterval = (lessonId: string) => {
+    const interval = saveIntervalsRef.current.get(lessonId);
+    if (interval) {
+      clearInterval(interval);
+      saveIntervalsRef.current.delete(lessonId);
+    }
+  };
+
+  /** Save progress immediately (on pause, on end, on collapse) */
+  const saveProgressNow = (lessonId: string) => {
+    const videoEl = videoRefs.current.get(lessonId);
+    if (!videoEl || !enrolled) return;
+
+    const pos = Math.floor(videoEl.currentTime);
+    const dur = Math.floor(videoEl.duration || 0);
+    if (dur > 0) {
+      saveWatchProgressMutation.mutate({
+        lessonId,
+        watchedPosition: pos,
+        videoDuration: dur,
+      });
+    }
+  };
+
+  // Cleanup all intervals on unmount
+  React.useEffect(() => {
+    return () => {
+      saveIntervalsRef.current.forEach((interval) => clearInterval(interval));
+      saveIntervalsRef.current.clear();
+    };
+  }, []);
+
+  // When a lesson is collapsed, save progress and stop interval
+  const prevExpandedRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (prevExpandedRef.current && prevExpandedRef.current !== expandedLessonId) {
+      saveProgressNow(prevExpandedRef.current);
+      stopSaveInterval(prevExpandedRef.current);
+    }
+    prevExpandedRef.current = expandedLessonId;
+  }, [expandedLessonId]);
 
   // ── enroll mutation ────────────────────────────────────────────────────────
 
@@ -151,9 +287,10 @@ const CourseDetailPage: React.FC = () => {
       setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
       void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
       void queryClient.invalidateQueries({ queryKey: ['enrollment-check', courseId] });
+      void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
     },
     onError: () => {
-      setFeedbackMessage('Unable to enroll right now. Please try again.');
+      setFeedbackMessage('You are already enrolled in this course.');
     },
   });
 
@@ -191,6 +328,9 @@ const CourseDetailPage: React.FC = () => {
     const video = lesson.video;
     const documents = lesson.documents;
     const videoUrl = video?.cloudUrl;
+    const isCompleted = completedLessonIds.has(lesson._id);
+    const lessonProgress = progressData?.lessons.find((l) => l._id === lesson._id);
+    const watchPct = lessonProgress?.watchProgress?.watchPercentage ?? 0;
 
     const handleLessonClick = () => {
       if (!canAccess) return;
@@ -198,7 +338,7 @@ const CourseDetailPage: React.FC = () => {
     };
 
     return (
-      <div key={lesson._id} className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+      <div key={lesson._id} className={`overflow-hidden rounded-xl border bg-white shadow-sm ${isCompleted ? 'border-green-200' : 'border-slate-100'}`}>
         <button
           type="button"
           onClick={handleLessonClick}
@@ -206,16 +346,35 @@ const CourseDetailPage: React.FC = () => {
             canAccess ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default opacity-80'
           } ${isExpanded ? 'bg-primary-900/5' : ''}`}
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-900/10 text-sm font-bold text-primary-900">
-            {index + 1}
-          </span>
+          {/* Lesson number or check icon */}
+          {isCompleted ? (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
+              <CheckCircle size={18} />
+            </span>
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-900/10 text-sm font-bold text-primary-900">
+              {index + 1}
+            </span>
+          )}
           <div className="flex flex-1 flex-col">
-            <span className="text-sm font-semibold text-slate-800">{lesson.title}</span>
+            <span className={`text-sm font-semibold ${isCompleted ? 'text-green-700' : 'text-slate-800'}`}>
+              {lesson.title}
+            </span>
             {lesson.description && (
               <span className="text-xs text-slate-500">{lesson.description}</span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-500">
+            {isCompleted && (
+              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                Completed
+              </span>
+            )}
+            {!isCompleted && enrolled && watchPct > 0 && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                {Math.round(watchPct)}% watched
+              </span>
+            )}
             {documents && documents.length > 0 && (
               <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
                 <FileText size={12} />
@@ -245,7 +404,7 @@ const CourseDetailPage: React.FC = () => {
         {/* Expanded content */}
         {isExpanded && canAccess && (
           <div className="border-t border-slate-100 px-4 py-4 bg-slate-50/50">
-            {/* Video Player */}
+            {/* Video Player — with resume, periodic save, and auto-complete */}
             {videoUrl && (
               <div className="mb-4">
                 <video
@@ -255,6 +414,56 @@ const CourseDetailPage: React.FC = () => {
                   className="w-full max-h-[480px] rounded-lg bg-black"
                   src={videoUrl}
                   preload="metadata"
+                  ref={(el) => {
+                    if (el) videoRefs.current.set(lesson._id, el);
+                    else videoRefs.current.delete(lesson._id);
+                  }}
+                  onLoadedMetadata={async (e) => {
+                    // Resume from last saved position
+                    if (!enrolled) return;
+                    try {
+                      const wp = await coursesApi.getLessonWatchProgress(courseId!, lesson._id);
+                      if (wp && wp.watchedPosition > 0) {
+                        const videoEl = e.currentTarget;
+                        // Don't seek if already completed — start from beginning
+                        if (!completedLessonIds.has(lesson._id)) {
+                          videoEl.currentTime = wp.watchedPosition;
+                        }
+                      }
+                    } catch {
+                      // No saved progress — start from beginning
+                    }
+                  }}
+                  onPlay={() => {
+                    if (enrolled) startSaveInterval(lesson._id);
+                  }}
+                  onPause={() => {
+                    if (enrolled) {
+                      saveProgressNow(lesson._id);
+                      stopSaveInterval(lesson._id);
+                    }
+                  }}
+                  onTimeUpdate={(e) => {
+                    // Auto-complete at 90% watch threshold
+                    if (!enrolled || isCompleted) return;
+                    const videoEl = e.currentTarget;
+                    if (videoEl.duration > 0) {
+                      const pct = (videoEl.currentTime / videoEl.duration) * 100;
+                      if (pct >= 90) {
+                        handleMarkComplete(lesson._id);
+                        stopSaveInterval(lesson._id);
+                      }
+                    }
+                  }}
+                  onEnded={() => {
+                    if (enrolled) {
+                      saveProgressNow(lesson._id);
+                      stopSaveInterval(lesson._id);
+                      if (!isCompleted) {
+                        handleMarkComplete(lesson._id);
+                      }
+                    }
+                  }}
                 >
                   Your browser does not support the video tag.
                 </video>
@@ -296,6 +505,14 @@ const CourseDetailPage: React.FC = () => {
                     </a>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Completed indicator */}
+            {enrolled && isCompleted && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
+                <CheckCircle size={16} />
+                Lesson completed
               </div>
             )}
           </div>
@@ -465,14 +682,35 @@ const CourseDetailPage: React.FC = () => {
 
                   {/* lessons */}
                   <div className="rounded-xl border border-slate-100 bg-white px-6 py-5 shadow-sm">
-                    <h2 className="mb-4 text-base font-bold text-slate-800">
-                      Course Content
-                      {lessons && (
-                        <span className="ml-2 text-sm font-normal text-slate-500">
-                          ({lessons.length} lessons)
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-base font-bold text-slate-800">
+                        Course Content
+                        {lessons && (
+                          <span className="ml-2 text-sm font-normal text-slate-500">
+                            ({lessons.length} lessons)
+                          </span>
+                        )}
+                      </h2>
+                      {enrolled && totalLessons > 0 && (
+                        <span className="text-sm font-semibold text-slate-600">
+                          {completedCount}/{totalLessons} completed
                         </span>
                       )}
-                    </h2>
+                    </div>
+
+                    {/* Inline progress bar for enrolled students */}
+                    {enrolled && totalLessons > 0 && (
+                      <div className="mb-4">
+                        <div className="h-2 w-full rounded-full bg-slate-100">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                              progressPercent === 100 ? 'bg-green-500' : 'bg-primary-900'
+                            }`}
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     {lessonsLoading ? (
                       <div className="space-y-3 animate-pulse">
                         {Array.from({ length: 4 }).map((_, i) => (
@@ -531,7 +769,51 @@ const CourseDetailPage: React.FC = () => {
                     ) : enrolled ? (
                       <div className="space-y-3">
                         <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                          You are enrolled in this course.
+                          {progressData?.enrollment.status === 'completed'
+                            ? '🎉 You have completed this course!'
+                            : 'You are enrolled in this course.'}
+                        </div>
+
+                        {/* Progress bar */}
+                        <div>
+                          <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
+                            <span>{completedCount} / {totalLessons} lessons</span>
+                            <span className="font-semibold text-slate-700">{progressPercent}%</span>
+                          </div>
+                          <div className="h-2.5 w-full rounded-full bg-slate-100">
+                            <div
+                              className={`h-2.5 rounded-full transition-all duration-500 ${
+                                progressPercent === 100 ? 'bg-green-500' : 'bg-primary-900'
+                              }`}
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <Link
+                          to="/dashboard"
+                          className="block w-full rounded-xl bg-emerald-600 py-3 text-center text-sm font-bold text-white transition hover:bg-emerald-700"
+                        >
+                          Go to My Learning
+                        </Link>
+                      </div>
+                    ) : enrollmentDbStatus === 'dropped' ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+                          You previously dropped this course.
+                        </div>
+                        <button
+                          onClick={handleEnroll}
+                          disabled={enrollMutation.isPending}
+                          className="w-full rounded-xl bg-primary-900 py-3 text-sm font-bold text-white transition hover:bg-primary-900/90 disabled:opacity-60"
+                        >
+                          {enrollMutation.isPending ? 'Re-enrolling…' : 'Re-enroll in this Course'}
+                        </button>
+                      </div>
+                    ) : enrollmentDbStatus === 'completed' ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-green-50 px-4 py-3 text-center text-sm text-green-800">
+                          ✓ You have already completed this course.
                         </div>
                         <Link
                           to="/dashboard"
