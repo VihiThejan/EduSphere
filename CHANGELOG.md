@@ -86,3 +86,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - POST /vendor-billing/verify-checkout retrieves the Stripe session and activates the subscription if payment_status is paid
 - Enables local development without running the Stripe CLI webhook daemon
 - Frontend stores checkoutSessionId in localStorage before redirect and calls verify on return
+- My Learning page lists all enrolled courses with thumbnail, status badge, and progress bar
+- Filter buttons: All, Active, Completed, Dropped
+- Stats bar showing enrolled count, active, completed, and average progress percentage
