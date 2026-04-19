@@ -89,3 +89,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - My Learning page lists all enrolled courses with thumbnail, status badge, and progress bar
 - Filter buttons: All, Active, Completed, Dropped
 - Stats bar showing enrolled count, active, completed, and average progress percentage
+- Extracted useSidebarItems and useAdminSidebarItems hooks shared across all layout pages
+- Sidebar items now use useLocation() for accurate path-based active state detection
+- Tutor-only items (Tutor Hub, Upload Course) rendered conditionally by role
