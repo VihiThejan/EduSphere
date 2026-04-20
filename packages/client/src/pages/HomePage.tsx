@@ -3,17 +3,41 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
+  ChevronDown,
   FileCheck,
   GraduationCap,
+  LayoutDashboard,
+  LogOut,
   Play,
   ShieldCheck,
   ShoppingBag,
   TrendingUp,
+  User,
   Users,
   Video,
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
 const HomePage: React.FC = () => {
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const userName = user?.profile.firstName
+    ? `${user.profile.firstName}${user.profile.lastName ? ' ' + user.profile.lastName : ''}`
+    : 'User';
+  const avatarUrl = user?.profile.avatar;
   const showcaseCards = [
     {
       title: 'Kuppi Video Sessions',
@@ -85,18 +109,89 @@ const HomePage: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="hidden rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/register"
-              className="inline-flex rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
-            >
-              Sign Up
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  onClick={() => setUserMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-slate-100"
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={userName}
+                      className="h-8 w-8 rounded-full border-2 border-primary-900/20 object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-900 text-sm font-bold text-white">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="hidden text-sm font-semibold text-slate-700 sm:inline">
+                    {userName}
+                  </span>
+                  <ChevronDown size={14} className="text-slate-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
+                    <div className="border-b border-slate-100 px-4 py-2">
+                      <p className="text-sm font-semibold text-slate-900">{userName}</p>
+                      <p className="text-xs text-slate-500">{user?.email}</p>
+                    </div>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <LayoutDashboard size={16} className="text-slate-400" />
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/courses"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <BookOpen size={16} className="text-slate-400" />
+                      My Courses
+                    </Link>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <User size={16} className="text-slate-400" />
+                      Profile
+                    </Link>
+                    <div className="my-1 border-t border-slate-100" />
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        void logout();
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
+                    >
+                      <LogOut size={16} />
+                      Log Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="hidden rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 sm:inline-flex"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-800"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
