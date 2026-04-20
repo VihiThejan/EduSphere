@@ -182,9 +182,27 @@ export class CourseService {
       throw new NotFoundError('Course');
     }
 
-    const lessons = await LessonModel.find({ courseId }).sort({ order: 1 });
+    const lessons = await LessonModel.find({ courseId })
+      .sort({ order: 1 })
+      .populate('videoId', 'originalName cloudUrl duration')
+      .populate('documentIds', 'originalName mimetype size');
 
-    return lessons;
+    // Map populated data into video/documents fields for the client
+    const mapped = lessons.map((lesson) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const obj: any = lesson.toObject();
+      if (obj.videoId && typeof obj.videoId === 'object') {
+        obj.video = obj.videoId;
+        obj.videoId = obj.video._id;
+      }
+      if (obj.documentIds && Array.isArray(obj.documentIds) && obj.documentIds.length > 0 && typeof obj.documentIds[0] === 'object') {
+        obj.documents = obj.documentIds;
+        obj.documentIds = obj.documents.map((d: { _id: string }) => d._id);
+      }
+      return obj;
+    });
+
+    return mapped;
   }
 
   async addLesson(
