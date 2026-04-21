@@ -92,3 +92,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Extracted useSidebarItems and useAdminSidebarItems hooks shared across all layout pages
 - Sidebar items now use useLocation() for accurate path-based active state detection
 - Tutor-only items (Tutor Hub, Upload Course) rendered conditionally by role
+
+### Fixed
+- Seller Listings sidebar item used active('/seller') which matched every /seller/* path
+- Corrected to active('/seller/listings') so only the listings page highlights the item
+- Removed dead hash anchors from sidebar that caused noisy hashchange console events
