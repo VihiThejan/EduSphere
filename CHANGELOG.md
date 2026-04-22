@@ -97,3 +97,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Seller Listings sidebar item used active('/seller') which matched every /seller/* path
 - Corrected to active('/seller/listings') so only the listings page highlights the item
 - Removed dead hash anchors from sidebar that caused noisy hashchange console events
+- getRedirectPath(roles) helper in LoginPage redirects admins to /admin/dashboard
+- PublicRoute wrapper redirects already-authenticated admins away from login page
+- Tutor and student accounts continue to redirect to /dashboard
