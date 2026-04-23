@@ -100,3 +100,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - getRedirectPath(roles) helper in LoginPage redirects admins to /admin/dashboard
 - PublicRoute wrapper redirects already-authenticated admins away from login page
 - Tutor and student accounts continue to redirect to /dashboard
+- AdminRouteGate component blocks non-admin users with an Access Denied page
+- All five admin routes wrapped in ProtectedRoute + AdminRouteGate in App.tsx
+- Admin API client with typed interfaces for stats, users, sellers, listings, and orders
