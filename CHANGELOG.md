@@ -103,3 +103,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - AdminRouteGate component blocks non-admin users with an Access Denied page
 - All five admin routes wrapped in ProtectedRoute + AdminRouteGate in App.tsx
 - Admin API client with typed interfaces for stats, users, sellers, listings, and orders
+- Seed script creates VendorPlan documents for all three tiers
+- Active VendorSubscription records seeded for admin (Elite), tutors (Pro/Starter), and vendor demo (Pro)
+- SellerProfile shop documents seeded for all five marketplace seller accounts
+- Vendor demo account vendor@edusphere.com added with dedicated seller role
