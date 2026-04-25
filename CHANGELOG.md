@@ -107,3 +107,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Active VendorSubscription records seeded for admin (Elite), tutors (Pro/Starter), and vendor demo (Pro)
 - SellerProfile shop documents seeded for all five marketplace seller accounts
 - Vendor demo account vendor@edusphere.com added with dedicated seller role
+- SAMPLE_USERS.md documents all seeded accounts with roles, vendor plan tiers, and enrolled courses
+- Includes login redirect paths per role and re-seeding instructions
