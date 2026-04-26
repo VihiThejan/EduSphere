@@ -109,3 +109,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Vendor demo account vendor@edusphere.com added with dedicated seller role
 - SAMPLE_USERS.md documents all seeded accounts with roles, vendor plan tiers, and enrolled courses
 - Includes login redirect paths per role and re-seeding instructions
+- checkoutSessionId stored in localStorage before Stripe redirect so it survives full-page navigation
+- On ?checkout=success the page calls POST /vendor-billing/verify-checkout
+- Verifying, success, and error banners shown based on verification result
+- Status query invalidated after success so the UI reflects the active plan immediately
