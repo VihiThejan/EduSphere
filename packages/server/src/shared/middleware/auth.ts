@@ -14,7 +14,7 @@ declare global {
 
 export const authenticate = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
@@ -41,8 +41,32 @@ export const authenticate = async (
   }
 };
 
+/**
+ * Optional authentication — sets req.user if a valid token is present,
+ * but does NOT reject the request if no token or an invalid token is sent.
+ */
+export const optionalAuth = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret) as DecodedToken;
+      req.user = decoded;
+    } catch {
+      // Invalid/expired token — proceed without user context
+    }
+  }
+
+  next();
+};
+
 export const authorize = (allowedRoles: UserRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
         throw new AuthenticationError('User not authenticated');

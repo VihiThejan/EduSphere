@@ -1,158 +1,261 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { useAuthStore } from './store/authStore';
-import { AUTH_SESSION_HINT_KEY } from './store/authStore';
-import { apiClient } from './services/api/client';
+import { config } from './config';
 import './index.css';
 
 // Pages (to be created)
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import CoursesPage from './pages/courses/CoursesPage';
 import CourseDetailPage from './pages/courses/CourseDetailPage';
+import MarketplaceDetailPage from './pages/marketplace/MarketplaceDetailPage';
+import MarketplacePage from './pages/marketplace/MarketplacePage';
+import CheckoutPage from './pages/checkout/CheckoutPage';
+import CheckoutSuccessPage from './pages/checkout/CheckoutSuccessPage';
 import HomePage from './pages/HomePage';
 import TutorUploadPage from './pages/tutor/TutorUploadPage';
-import CheckoutPage from './pages/payments/CheckoutPage';
+import OrderDetailPage from './pages/orders/OrderDetailPage';
+import SellerBillingPage from './pages/seller/SellerBillingPage';
+import SellerOnboardingPage from './pages/seller/SellerOnboardingPage';
+import SellerCreateListingPage from './pages/seller/SellerCreateListingPage';
+import SellerListingsPage from './pages/seller/SellerListingsPage';
+import SellerOrdersPage from './pages/seller/SellerOrdersPage';
+import SellerDashboardPage from './pages/seller/SellerDashboardPage';
+import SellerEditListingPage from './pages/seller/SellerEditListingPage';
+import SellerProfilePage from './pages/seller/SellerProfilePage';
+import SellerRouteGate from './components/seller/SellerRouteGate';
+import LiveSessionPage from './pages/live/LiveSessionPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // Never retry on 401/403 — those need auth changes, not retries
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) return false;
+        return failureCount < 1;
+      },
     },
   },
 });
 
-const AppBootstrap: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const { checkAuth, initializeAsGuest, isInitialized, isLoading } = useAuthStore();
+const stripePromise = config.stripePublishableKey
+  ? loadStripe(config.stripePublishableKey)
+  : null;
 
-  React.useEffect(() => {
-    const isPublicRoute =
-      location.pathname === '/' ||
-      location.pathname === '/login' ||
-      location.pathname === '/register' ||
-      location.pathname === '/courses' ||
-      /^\/courses\/[^/]+$/.test(location.pathname);
-
-    if (isPublicRoute) {
-      initializeAsGuest();
-      return;
-    }
-
-    const hasSessionHint =
-      typeof window !== 'undefined' &&
-      window.localStorage.getItem(AUTH_SESSION_HINT_KEY) === '1';
-    const hasToken = !!apiClient.getAccessToken();
-
-    if (!hasSessionHint && !hasToken) {
-      initializeAsGuest();
-      return;
-    }
-
-    void checkAuth();
-  }, [checkAuth, initializeAsGuest, location.pathname]);
-
-  if (!isInitialized || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-600 shadow-sm">
-          Preparing your session...
-        </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-};
+// Loading screen shown while restoring session
+const AppLoader: React.FC = () => (
+  <div className="flex min-h-screen items-center justify-center bg-white">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-900 border-t-transparent" />
+      <p className="text-sm text-slate-500">Loading EduSphere…</p>
+    </div>
+  </div>
+);
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  const { isAuthenticated, isInitialized } = useAuthStore();
+  if (!isInitialized) return <AppLoader />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 // Public Route Component (redirect to dashboard if authenticated)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  const { isAuthenticated, isInitialized } = useAuthStore();
+  if (!isInitialized) return <AppLoader />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
 function App() {
+  const { initAuth, isInitialized } = useAuthStore();
+
+  // Run once on mount: try to restore session from the refresh cookie
+  useEffect(() => {
+    if (!isInitialized) {
+      initAuth();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const appRoutes = (
+    <BrowserRouter>
+      <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/marketplace/:listingId" element={<MarketplaceDetailPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+          
+          {/* Auth routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <RegisterPage />
+              </PublicRoute>
+            }
+          />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/orders/:orderId"
+            element={
+              <ProtectedRoute>
+                <OrderDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/dashboard"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerDashboardPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/billing"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerBillingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/onboarding"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate requireSellerRole={false} requireProfile={false}>
+                  <SellerOnboardingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings/create"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerCreateListingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings/:listingId/edit"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerEditListingPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/listings"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerListingsPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/profile"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerProfilePage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/seller/orders"
+            element={
+              <ProtectedRoute>
+                <SellerRouteGate>
+                  <SellerOrdersPage />
+                </SellerRouteGate>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Tutor routes */}
+          <Route
+            path="/tutor/upload"
+            element={
+              <ProtectedRoute>
+                <TutorUploadPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Live sessions */}
+          <Route
+            path="/live"
+            element={
+              <ProtectedRoute>
+                <LiveSessionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppBootstrap>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/courses" element={<CoursesPage />} />
-            <Route path="/courses/:courseId" element={<CourseDetailPage />} />
-
-            {/* Auth routes */}
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <LoginPage />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <PublicRoute>
-                  <RegisterPage />
-                </PublicRoute>
-              }
-            />
-
-            {/* Protected routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Tutor routes */}
-            <Route
-              path="/tutor/upload"
-              element={
-                <ProtectedRoute>
-                  <TutorUploadPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* 404 */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppBootstrap>
-      </BrowserRouter>
+      {stripePromise ? <Elements stripe={stripePromise}>{appRoutes}</Elements> : appRoutes}
     </QueryClientProvider>
   );
 }

@@ -8,7 +8,7 @@ export const errorHandler = (
   error: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   if (error instanceof SyntaxError && 'body' in error) {
     logger.error(`Invalid JSON payload: ${error.message}`, {

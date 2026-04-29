@@ -1,0 +1,37 @@
+[
+  {
+    "id": "m1",
+    "title": "Engineering Mathematics - 5th Edition",
+    "price": 4500,
+    "sellerName": "Sarah Perera",
+    "campus": "Colombo Campus",
+    "imageUrl": "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=80",
+    "itemType": "Textbooks",
+    "condition": "Used - Like New",
+    "verifiedSeller": true,
+    "negotiable": true,
+    "postedAt": "2026-03-17T08:30:00.000Z",
+    "breadcrumbLabel": "Engineering Mathematics",
+    "postedRelative": "2 hours ago",
+    "description": "Engineering Mathematics - 5th Edition by K.A. Stroud. This copy is in excellent condition with minimal highlighting on only two chapters. Perfect for students entering their second year of Engineering or Physical Sciences.",
+    "gallery": [
+      "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=900&q=80"
+    ],
+    "relevantCourses": [
+      "MATH201: Advanced Calculus",
+      "ENG102: Engineering Fundamentals",
+      "PHYS210: Computational Physics"
+    ],
+    "seller": {
+      "name": "Sarah Perera",
+      "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80",
+      "rating": 4.2,
+      "reviewCount": 12
+    },
+    "mapImageUrl": "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=800&q=80",
+    "similarListingIds": ["m4", "m9", "m11", "m6"]
+  }
+]
