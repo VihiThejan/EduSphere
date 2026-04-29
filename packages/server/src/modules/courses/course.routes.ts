@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { courseController } from './course.controller.js';
+import { analyticsController } from './analytics.controller.js';
+import { certificateController } from './certificate.controller.js';
 import { authenticate, authorize, optionalAuth } from '../../shared/middleware/auth.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import {
@@ -28,6 +30,30 @@ router.get(
   authenticate,
   authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
   courseController.getTutorCourses.bind(courseController)
+);
+
+/**
+ * @route   GET /api/v1/courses/analytics/overview
+ * @desc    Aggregated analytics for the authenticated tutor's courses
+ * @access  Private (Tutor only)
+ */
+router.get(
+  '/analytics/overview',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  analyticsController.getTutorOverview.bind(analyticsController)
+);
+
+/**
+ * @route   GET /api/v1/courses/:courseId/analytics
+ * @desc    Per-course analytics (owner only)
+ * @access  Private (Tutor only)
+ */
+router.get(
+  '/:courseId/analytics',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  analyticsController.getCourseAnalytics.bind(analyticsController)
 );
 
 /**

@@ -6,17 +6,10 @@ import {
   CheckCircle,
   Clock,
   GraduationCap,
-  LayoutDashboard,
-  Clock3,
-  ShoppingBag,
-  ListChecks,
-  Radio,
-  Upload,
-  BarChart3,
-  Settings,
 } from 'lucide-react';
-import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
+import { AppFooter, AppHeader, AppSidebar } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
+import { useSidebarItems } from '@/hooks/useSidebarItems';
 import { coursesApi, MyLearningItem } from '@/services/api/courses.api';
 
 const FILTERS = [
@@ -103,27 +96,12 @@ const MyLearningPage: React.FC = () => {
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
 
-  const isTutor = user?.roles?.includes('tutor') || user?.roles?.includes('admin');
+  const { primaryItems, secondaryItems } = useSidebarItems();
 
-  const headerNavItems: AppNavItem[] = [
+  const headerNavItems = [
     { label: 'Courses', href: '/courses' },
     { label: 'Marketplace', href: '/marketplace' },
     { label: 'Community', href: '/' },
-  ];
-
-  const primaryItems: AppNavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '/my-learning', active: true, icon: Clock3 },
-    { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
-    { label: 'Listings', href: '/seller/listings', icon: ListChecks },
-    { label: 'Live Sessions', href: '/live', icon: Radio },
-    ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
-  ];
-
-  const secondaryItems: AppNavItem[] = [
-    { label: 'Analytics', href: '#', icon: BarChart3 },
-    { label: 'Settings', href: '#', icon: Settings },
   ];
 
   const { data: items = [], isLoading } = useQuery({

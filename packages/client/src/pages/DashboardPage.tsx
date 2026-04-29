@@ -1,19 +1,14 @@
 import React from 'react';
 import {
   Activity,
-  BarChart3,
   BookOpen,
   ClipboardList,
   Clock3,
-  LayoutDashboard,
-  ListChecks,
-  Settings,
-  ShoppingBag,
   TrendingUp,
-  Upload,
   BookPlus,
   ArrowRight,
   Radio,
+  Upload,
   Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -21,6 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import { tutorApi, LiveSession } from '@/services/api/tutor.api';
 import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
+import { useSidebarItems } from '@/hooks/useSidebarItems';
 import ContinueLearningSection from '@/components/dashboard/ContinueLearningSection';
 import KuppiSessionsPanel from '@/components/dashboard/KuppiSessionsPanel';
 import MyLearningSection from '@/components/dashboard/MyLearningSection';
@@ -72,22 +68,7 @@ const DashboardPage: React.FC = () => {
     { label: 'My Learning', href: '/dashboard', active: true },
   ];
 
-  const isTutor = user?.roles?.includes('tutor') || user?.roles?.includes('admin');
-
-  const primaryItems: AppNavItem[] = [
-    { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
-    { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '/my-learning', icon: Clock3 },
-    { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
-    { label: 'Listings', href: '#', icon: ListChecks },
-    { label: 'Live Sessions', href: '/live', icon: Radio },
-    ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
-  ];
-
-  const secondaryItems: AppNavItem[] = [
-    { label: 'Analytics', href: '#', icon: BarChart3 },
-    { label: 'Settings', href: '#', icon: Settings },
-  ];
+  const { primaryItems, secondaryItems, isTutor } = useSidebarItems();
 
   const stats: DashboardStat[] = [
     {

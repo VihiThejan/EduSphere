@@ -1,19 +1,9 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  LayoutDashboard,
-  BookOpen,
-  Clock3,
-  ShoppingBag,
-  ListChecks,
-  Radio,
-  Upload,
-  BarChart3,
-  Settings,
-} from 'lucide-react';
-import { AppFooter, AppHeader, AppSidebar, AppNavItem } from '@/components/common';
+import { AppFooter, AppHeader, AppSidebar } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
+import { useSidebarItems } from '@/hooks/useSidebarItems';
 import { ordersApi } from '@/services/api/orders.api';
 import { IOrderItem } from '@edusphere/shared';
 
@@ -22,26 +12,11 @@ const OrderDetailPage: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [search, setSearch] = React.useState('');
 
-  const isTutor = user?.roles?.includes('tutor') || user?.roles?.includes('admin');
+  const { primaryItems, secondaryItems } = useSidebarItems();
 
-  const headerNavItems: AppNavItem[] = [
+  const headerNavItems = [
     { label: 'Courses', href: '/courses' },
     { label: 'Marketplace', href: '/marketplace' },
-  ];
-
-  const primaryItems: AppNavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '/my-learning', icon: Clock3 },
-    { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
-    { label: 'Listings', href: '/seller/listings', icon: ListChecks },
-    { label: 'Live Sessions', href: '/live', icon: Radio },
-    ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload }] : []),
-  ];
-
-  const secondaryItems: AppNavItem[] = [
-    { label: 'Analytics', href: '#', icon: BarChart3 },
-    { label: 'Settings', href: '#', icon: Settings },
   ];
 
   const { data: order, isLoading, isError } = useQuery({

@@ -20,6 +20,11 @@ export interface IUser extends Document {
   refreshTokens: string[];
   isMarketplaceSeller: boolean;
   marketplaceStatus: MarketplaceStatus;
+  // Tutor approval workflow
+  tutorRequestStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  tutorRequestedAt?: Date;
+  tutorApprovedAt?: Date;
+  tutorRejectionReason?: string;
   // Account lockout
   loginAttempts: number;
   lockUntil?: Date;
@@ -117,6 +122,23 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: Object.values(MARKETPLACE_STATUS),
       default: MARKETPLACE_STATUS.ACTIVE,
+    },
+    tutorRequestStatus: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none',
+      index: true,
+    },
+    tutorRequestedAt: {
+      type: Date,
+    },
+    tutorApprovedAt: {
+      type: Date,
+    },
+    tutorRejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
     },
     loginAttempts: {
       type: Number,

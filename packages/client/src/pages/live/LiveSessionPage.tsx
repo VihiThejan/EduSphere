@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { tutorApi, LiveSession } from '@/services/api/tutor.api';
 import { AppFooter, AppHeader, AppSidebar } from '@/components/common';
+import { useSidebarItems } from '@/hooks/useSidebarItems';
 import { USER_ROLES } from '@edusphere/shared';
 import type { AppNavItem } from '@/components/common';
 
@@ -301,14 +302,9 @@ const LiveSessionPage: React.FC = () => {
   const headerItems: AppNavItem[] = [
     { label: 'Courses', href: '/courses' },
     { label: 'Live Sessions', href: '/live', active: true },
-    { label: 'My Learning', href: '/dashboard' },
+    { label: 'My Learning', href: '/my-learning' },
   ];
-  const sidebarPrimary: AppNavItem[] = [
-    { label: 'Dashboard', href: '/dashboard', icon: Video },
-    { label: 'Courses', href: '/courses', icon: Video },
-    { label: 'Live Sessions', href: '/live', icon: Radio, active: true },
-    ...(isTutor ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Plus }] : []),
-  ];
+  const { primaryItems: sidebarPrimary, secondaryItems: sidebarSecondary } = useSidebarItems();
 
   // ── room view ────────────────────────────────────────────────────────────────
   if (activeRoom) {
@@ -343,7 +339,7 @@ const LiveSessionPage: React.FC = () => {
       />
 
       <div className="flex flex-1">
-        <AppSidebar primaryItems={sidebarPrimary} secondaryItems={[]} streakDays={undefined} />
+        <AppSidebar primaryItems={sidebarPrimary} secondaryItems={sidebarSecondary} />
 
         <main className="flex-1 px-6 py-8 md:px-10">
           {/* Page header */}

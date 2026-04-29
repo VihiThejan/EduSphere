@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserModel } from './user.model.js';
 import { NotFoundError, ValidationError } from '../../shared/utils/errors.js';
-import { ApiResponse } from '@edusphere/shared';
+import { ApiResponse, USER_ROLES } from '@edusphere/shared';
 
 export class UserController {
   async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -44,6 +44,115 @@ export class UserController {
         success: true,
         data: { user },
         message: 'Profile updated successfully',
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Tutor Approval Workflow ────────────────────────────────────────────────
+
+  /**
+   * POST /api/v1/users/request-tutor
+   * Any authenticated user (student) requests the tutor role.
+   */
+  async requestTutorRole(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.userId;
+      const user = await UserModel.findById(userId);
+      if (!user) throw new NotFoundError('User');
+
+      if (user.roles.includes(USER_ROLES.TUTOR)) {
+        throw new ValidationError('You are already a tutor');
+      }
+      if (user.tutorRequestStatus === 'pending') {
+        throw new ValidationError('You already have a pending tutor request');
+      }
+
+      user.tutorRequestStatus = 'pending';
+      user.tutorRequestedAt = new Date();
+      user.tutorRejectionReason = undefined;
+      await user.save();
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Tutor request submitted. An admin will review your request.',
+        data: { tutorRequestStatus: user.tutorRequestStatus },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/v1/users/tutor-requests?status=pending
+   * Admin: list tutor requests filtered by status.
+   */
+  async getTutorRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const status = (req.query.status as string) || 'pending';
+      const validStatuses = ['pending', 'approved', 'rejected', 'none'];
+      const filterStatus = validStatuses.includes(status) ? status : 'pending';
+
+      const users = await UserModel.find({ tutorRequestStatus: filterStatus })
+        .select('email profile roles tutorRequestStatus tutorRequestedAt tutorApprovedAt tutorRejectionReason createdAt')
+        .sort({ tutorRequestedAt: -1 })
+        .lean();
+
+      const response: ApiResponse = {
+        success: true,
+        data: { requests: users, total: users.length },
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PATCH /api/v1/users/:userId/tutor-request
+   * Admin: approve or reject a tutor request.
+   * Body: { action: 'approve' | 'reject', reason?: string }
+   */
+  async resolveTutorRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const { action, reason } = req.body as { action: 'approve' | 'reject'; reason?: string };
+
+      if (!['approve', 'reject'].includes(action)) {
+        throw new ValidationError('action must be "approve" or "reject"');
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) throw new NotFoundError('User');
+
+      if (user.tutorRequestStatus !== 'pending') {
+        throw new ValidationError('No pending tutor request for this user');
+      }
+
+      if (action === 'approve') {
+        user.tutorRequestStatus = 'approved';
+        user.tutorApprovedAt = new Date();
+        if (!user.roles.includes(USER_ROLES.TUTOR)) {
+          user.roles.push(USER_ROLES.TUTOR);
+        }
+      } else {
+        user.tutorRequestStatus = 'rejected';
+        user.tutorRejectionReason = reason?.trim() || 'Request rejected by admin';
+      }
+
+      await user.save();
+
+      const response: ApiResponse = {
+        success: true,
+        message: action === 'approve' ? 'Tutor role granted' : 'Request rejected',
+        data: {
+          userId: user._id,
+          tutorRequestStatus: user.tutorRequestStatus,
+          roles: user.roles,
+        },
       };
       res.status(200).json(response);
     } catch (error) {
