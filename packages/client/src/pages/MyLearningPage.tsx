@@ -11,6 +11,7 @@ import { AppFooter, AppHeader, AppSidebar } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { useSidebarItems } from '@/hooks/useSidebarItems';
 import { coursesApi, MyLearningItem } from '@/services/api/courses.api';
+import { analyticsApi } from '@/services/api/analytics.api';
 
 const FILTERS = [
   { label: 'All', value: '' },
@@ -110,6 +111,13 @@ const MyLearningPage: React.FC = () => {
     enabled: isAuthenticated,
   });
 
+  const { data: streakData } = useQuery({
+    queryKey: ['streak', user?._id],
+    queryFn: analyticsApi.getStreak,
+    enabled: isAuthenticated && !!user,
+  });
+  const streak = streakData?.streak ?? 0;
+
   const filtered = items.filter((item) =>
     item.course.title.toLowerCase().includes(search.toLowerCase())
   );
@@ -138,7 +146,7 @@ const MyLearningPage: React.FC = () => {
       />
 
       <div className="flex flex-1">
-        <AppSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
+        <AppSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={streak} />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
           {/* Page title */}
