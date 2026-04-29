@@ -5,6 +5,8 @@ import { ApiResponse } from '@edusphere/shared';
 class ApiClient {
   private client: AxiosInstance;
   private accessToken: string | null = null;
+  // Single-flight refresh: all concurrent 401s share one refresh call
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -18,48 +20,68 @@ class ApiClient {
     this.setupInterceptors();
   }
 
+  private doRefresh(): Promise<string | null> {
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = axios
+      .post<ApiResponse>(`${config.apiUrl}/auth/refresh`, {}, { withCredentials: true })
+      .then((res) => {
+        const newToken: string | null = res.data?.data?.accessToken ?? null;
+        if (newToken) this.setAccessToken(newToken);
+        return newToken;
+      })
+      .catch(() => {
+        this.clearAccessToken();
+        return null;
+      })
+      .finally(() => {
+        this.refreshPromise = null;
+      });
+
+    return this.refreshPromise;
+  }
+
   private setupInterceptors() {
-    // Request interceptor - attach access token
+    // Request interceptor — attach access token
     this.client.interceptors.request.use(
-      (config: InternalAxiosRequestConfig) => {
+      (req: InternalAxiosRequestConfig) => {
         if (this.accessToken) {
-          config.headers.Authorization = `Bearer ${this.accessToken}`;
+          req.headers.Authorization = `Bearer ${this.accessToken}`;
         }
-        return config;
+        return req;
       },
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor - handle token refresh
+    // Response interceptor — handle token refresh
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError<ApiResponse>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        // If 401 and not already retried, try to refresh token
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Only attempt refresh on 401, never for the refresh endpoint itself, and only once
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !originalRequest.url?.includes('/auth/refresh')
+        ) {
           originalRequest._retry = true;
 
-          try {
-            const { data } = await axios.post<ApiResponse>(
-              `${config.apiUrl}/auth/refresh`,
-              {},
-              { withCredentials: true }
-            );
+          const newToken = await this.doRefresh();
 
-            if (data.success && data.data?.accessToken) {
-              this.setAccessToken(data.data.accessToken);
-              originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
-              return this.client(originalRequest);
-            }
-          } catch (refreshError) {
-            // Refresh failed, clear token and redirect to login
-            this.clearAccessToken();
-            window.location.href = '/login';
-            return Promise.reject(refreshError);
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return this.client(originalRequest);
           }
+
+          // Refresh failed → redirect to login (but not if already there)
+          if (!window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
         }
 
+        // 403 = wrong role, not an auth failure — never redirect
         return Promise.reject(error);
       }
     );
@@ -77,6 +99,19 @@ class ApiClient {
     return this.accessToken;
   }
 
+  isTokenSet() {
+    return !!this.accessToken;
+  }
+
+  /**
+   * Called once on app start. Tries to silently restore the session
+   * using the HTTP-only refresh cookie. Returns the new access token
+   * or null if the session is gone.
+   */
+  async tryRestoreSession(): Promise<string | null> {
+    return this.doRefresh();
+  }
+
   // Generic GET request
   async get<T = any>(url: string, params?: any): Promise<T> {
     const response = await this.client.get<ApiResponse<T>>(url, { params });
@@ -92,6 +127,12 @@ class ApiClient {
   // Generic PUT request
   async put<T = any>(url: string, data?: any): Promise<T> {
     const response = await this.client.put<ApiResponse<T>>(url, data);
+    return response.data.data as T;
+  }
+
+  // Generic PATCH request
+  async patch<T = any>(url: string, data?: any): Promise<T> {
+    const response = await this.client.patch<ApiResponse<T>>(url, data);
     return response.data.data as T;
   }
 

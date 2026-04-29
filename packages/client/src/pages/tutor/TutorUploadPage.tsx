@@ -41,6 +41,15 @@ export interface UploadedFile {
   errorMessage?: string;
 }
 
+interface LessonEntry {
+  id: string;
+  title: string;
+  description: string;
+  videoFileId: string; // references UploadedFile.id (video)
+  documentFileIds: string[]; // references UploadedFile.id (documents)
+  isFree: boolean;
+}
+
 // ---------- Helpers ----------
 
 function formatBytes(bytes: number): string {
@@ -159,6 +168,10 @@ const TutorUploadPage: React.FC = () => {
   const [isDraggingVideo, setIsDraggingVideo] = useState(false);
   const [isDraggingDoc, setIsDraggingDoc] = useState(false);
 
+  // Step 2 – Lesson builder
+  const [lessons, setLessons] = useState<LessonEntry[]>([]);
+  const [isCreatingLessons, setIsCreatingLessons] = useState(false);
+
   // Step 3 – Pricing
   const [pricing, setPricing] = useState<PricingInfo>({
     accessType: 'paid',
@@ -269,9 +282,10 @@ const TutorUploadPage: React.FC = () => {
   );
 
   /**
-   * Upload one or more video files.
-   * - Single file  → POST /videos/upload      (individual progress)
-   * - Multiple files → POST /videos/upload/bulk (combined progress, one request)
+   * Upload one or more video files using direct Cloudinary upload (fast path).
+   * Flow: get signature → POST directly to Cloudinary CDN → confirm metadata with server.
+   * Single file  → individual progress entry
+   * Multiple files → combined progress entry, then split into per-file entries on finish
    */
   const uploadVideos = useCallback(
     async (files: File[]) => {
@@ -288,11 +302,25 @@ const TutorUploadPage: React.FC = () => {
         ]);
 
         try {
-          const result = await tutorApi.uploadVideo(file, (p) => {
+          // Step 1: get Cloudinary signature (tiny JSON request)
+          const sig = await tutorApi.getVideoUploadSignature();
+
+          // Step 2: upload directly to Cloudinary CDN — progress reflects actual CDN transfer
+          const cloudData = await tutorApi.uploadVideoDirectly(file, sig, (p) => {
             setUploadedFiles((prev) =>
               prev.map((f) => (f.id === localId ? { ...f, progress: p.percentage } : f))
             );
           });
+
+          // Step 3: save metadata to DB
+          const result = await tutorApi.confirmVideoUpload({
+            cloudinaryId: cloudData.cloudinaryId,
+            secureUrl: cloudData.secureUrl,
+            originalName: file.name,
+            size: file.size,
+            mimetype: file.type,
+          });
+
           setUploadedFiles((prev) =>
             prev.map((f) =>
               f.id === localId ? { ...f, remoteId: result.videoId, progress: 100, status: 'done' } : f
@@ -307,7 +335,7 @@ const TutorUploadPage: React.FC = () => {
           addToast('error', `Failed to upload ${file.name}`);
         }
       } else {
-        // Bulk – one combined progress entry covering all files
+        // Bulk – one combined progress entry; files upload in parallel directly to Cloudinary
         const bulkId = generateId();
         const totalSize = files.reduce((s, f) => s + f.size, 0);
         const label = `${files.length} videos (bulk upload)`;
@@ -317,12 +345,37 @@ const TutorUploadPage: React.FC = () => {
           { id: bulkId, name: label, size: totalSize, kind: 'video', progress: 0, status: 'uploading' },
         ]);
 
+        // Track per-file loaded bytes for a combined progress bar
+        const loadedPerFile = new Array<number>(files.length).fill(0);
+
         try {
-          const results = await tutorApi.uploadVideosBulk(files, (p) => {
-            setUploadedFiles((prev) =>
-              prev.map((f) => (f.id === bulkId ? { ...f, progress: p.percentage } : f))
-            );
-          });
+          const results = await Promise.all(
+            files.map((file, i) =>
+              tutorApi.getVideoUploadSignature()
+                .then((sig) =>
+                  tutorApi.uploadVideoDirectly(file, sig, (p) => {
+                    loadedPerFile[i] = p.loaded;
+                    const totalLoaded = loadedPerFile.reduce((a, b) => a + b, 0);
+                    setUploadedFiles((prev) =>
+                      prev.map((f) =>
+                        f.id === bulkId
+                          ? { ...f, progress: Math.round((totalLoaded * 100) / totalSize) }
+                          : f
+                      )
+                    );
+                  })
+                )
+                .then((cloudData) =>
+                  tutorApi.confirmVideoUpload({
+                    cloudinaryId: cloudData.cloudinaryId,
+                    secureUrl: cloudData.secureUrl,
+                    originalName: file.name,
+                    size: file.size,
+                    mimetype: file.type,
+                  })
+                )
+            )
+          );
 
           // Replace the single bulk entry with one entry per uploaded video
           setUploadedFiles((prev) => {
@@ -350,20 +403,75 @@ const TutorUploadPage: React.FC = () => {
         }
       }
     },
-    [courseId, addToast]
+    [addToast]
+  );
+
+  // ---- File validation ----
+  const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/avi'];
+  const ALLOWED_VIDEO_EXTS = ['.mp4', '.mov', '.webm', '.avi'];
+  const ALLOWED_DOC_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
+  const ALLOWED_DOC_EXTS = ['.pdf', '.doc', '.docx'];
+  const MAX_VIDEO_BYTES = 500 * 1024 * 1024; // 500 MB
+  const MAX_DOC_BYTES   = 50  * 1024 * 1024; // 50 MB
+
+  const validateFile = useCallback(
+    (file: File, kind: FileKind): string | null => {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (kind === 'video') {
+        if (!ALLOWED_VIDEO_TYPES.includes(file.type) && !ALLOWED_VIDEO_EXTS.includes(ext)) {
+          return `"${file.name}" is not a supported video format. Allowed: MP4, MOV, WebM, AVI.`;
+        }
+        if (file.size > MAX_VIDEO_BYTES) {
+          return `"${file.name}" exceeds the 500 MB video size limit (${formatBytes(file.size)}).`;
+        }
+        if (file.size === 0) {
+          return `"${file.name}" is empty and cannot be uploaded.`;
+        }
+      } else {
+        if (!ALLOWED_DOC_TYPES.includes(file.type) && !ALLOWED_DOC_EXTS.includes(ext)) {
+          return `"${file.name}" is not a supported document format. Allowed: PDF, DOC, DOCX.`;
+        }
+        if (file.size > MAX_DOC_BYTES) {
+          return `"${file.name}" exceeds the 50 MB document size limit (${formatBytes(file.size)}).`;
+        }
+        if (file.size === 0) {
+          return `"${file.name}" is empty and cannot be uploaded.`;
+        }
+      }
+      return null;
+    },
+    [addToast]
   );
 
   const handleFileSelect = useCallback(
     (files: FileList | null, kind: FileKind) => {
       if (!files || files.length === 0) return;
       const arr = Array.from(files);
+
+      // Validate each file before uploading
+      const valid: File[] = [];
+      for (const file of arr) {
+        const error = validateFile(file, kind);
+        if (error) {
+          addToast('error', error);
+        } else {
+          valid.push(file);
+        }
+      }
+
+      if (valid.length === 0) return;
+
       if (kind === 'video') {
-        void uploadVideos(arr);
+        void uploadVideos(valid);
       } else {
-        arr.forEach((file) => void uploadDocument(file));
+        valid.forEach((file) => void uploadDocument(file));
       }
     },
-    [uploadVideos, uploadDocument]
+    [uploadVideos, uploadDocument, validateFile, addToast]
   );
 
   const removeFile = useCallback(
@@ -395,7 +503,66 @@ const TutorUploadPage: React.FC = () => {
     createCourseMutation.mutate();
   };
 
-  const handleStep2Next = () => setStep(3);
+  const handleStep2Next = async () => {
+    const doneFiles = uploadedFiles.filter((f) => f.status === 'done');
+    const uploading  = uploadedFiles.some((f) => f.status === 'uploading');
+
+    if (uploading) {
+      addToast('error', 'Please wait — files are still uploading.');
+      return;
+    }
+    if (doneFiles.length === 0) {
+      addToast('error', 'Upload at least one video or document before continuing.');
+      return;
+    }
+    const hasVideo = doneFiles.some((f) => f.kind === 'video');
+    if (!hasVideo) {
+      addToast('error', 'At least one video lesson is required to create a course.');
+      return;
+    }
+    if (lessons.length === 0) {
+      addToast('error', 'Add at least one lesson to organize your course content.');
+      return;
+    }
+    // Validate each lesson has a title and video
+    for (const lesson of lessons) {
+      if (!lesson.title.trim() || lesson.title.length < 3) {
+        addToast('error', `Lesson "${lesson.title || '(untitled)'}" needs a title (min 3 chars).`);
+        return;
+      }
+      if (!lesson.videoFileId) {
+        addToast('error', `Lesson "${lesson.title}" needs a video attached.`);
+        return;
+      }
+    }
+
+    // Create lessons via API
+    if (!courseId) return;
+    setIsCreatingLessons(true);
+    try {
+      for (let i = 0; i < lessons.length; i++) {
+        const lesson = lessons[i];
+        const videoFile = uploadedFiles.find((f) => f.id === lesson.videoFileId);
+        const docFiles = lesson.documentFileIds
+          .map((id) => uploadedFiles.find((f) => f.id === id))
+          .filter(Boolean);
+        await tutorApi.addLesson(courseId, {
+          title: lesson.title,
+          description: lesson.description || undefined,
+          order: i + 1,
+          videoId: videoFile?.remoteId,
+          documentIds: docFiles.map((f) => f!.remoteId!).filter(Boolean),
+          isFree: lesson.isFree,
+        });
+      }
+      addToast('success', `${lessons.length} lesson(s) created successfully!`);
+      setStep(3);
+    } catch {
+      addToast('error', 'Failed to create lessons. Please try again.');
+    } finally {
+      setIsCreatingLessons(false);
+    }
+  };
 
   const tutorName = user?.profile?.firstName
     ? `${user.profile.firstName} ${user.profile.lastName ?? ''}`.trim()
@@ -864,6 +1031,187 @@ const TutorUploadPage: React.FC = () => {
                 </div>
               )}
 
+              {/* ── Lesson Builder ── */}
+              {uploadedFiles.some((f) => f.kind === 'video' && f.status === 'done') && (
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-base font-bold flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary-900">playlist_add</span>
+                      Organize Lessons
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLessons((prev) => [
+                          ...prev,
+                          {
+                            id: generateId(),
+                            title: '',
+                            description: '',
+                            videoFileId: '',
+                            documentFileIds: [],
+                            isFree: prev.length === 0, // First lesson free by default
+                          },
+                        ]);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-900/10 text-primary-900 text-sm font-semibold hover:bg-primary-900/20 transition"
+                    >
+                      <span className="material-symbols-outlined text-base">add</span>
+                      Add Lesson
+                    </button>
+                  </div>
+
+                  {lessons.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-2 border-2 border-dashed border-slate-200 rounded-xl">
+                      <span className="material-symbols-outlined text-3xl">school</span>
+                      <p className="text-sm">Click "Add Lesson" to start organizing your course content.</p>
+                      <p className="text-xs">Each lesson can have a video and optional labsheet documents.</p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-4">
+                    {lessons.map((lesson, idx) => {
+                      const doneVideos = uploadedFiles.filter((f) => f.kind === 'video' && f.status === 'done');
+                      const doneDocs = uploadedFiles.filter((f) => f.kind === 'document' && f.status === 'done');
+                      // Videos already assigned to other lessons
+                      const usedVideoIds = lessons.filter((l) => l.id !== lesson.id).map((l) => l.videoFileId);
+                      const availableVideos = doneVideos.filter((v) => !usedVideoIds.includes(v.id) || v.id === lesson.videoFileId);
+
+                      return (
+                        <div key={lesson.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-900 text-xs font-bold text-white">
+                                {idx + 1}
+                              </span>
+                              <span className="text-sm font-bold text-slate-600">Lesson {idx + 1}</span>
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={lesson.isFree}
+                                  onChange={(e) =>
+                                    setLessons((prev) =>
+                                      prev.map((l) => (l.id === lesson.id ? { ...l, isFree: e.target.checked } : l))
+                                    )
+                                  }
+                                  className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
+                                />
+                                <span className="text-slate-500 font-medium">Free Preview</span>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setLessons((prev) => prev.filter((l) => l.id !== lesson.id))}
+                                className="p-1 text-slate-400 hover:text-red-500 rounded transition"
+                              >
+                                <span className="material-symbols-outlined text-lg">close</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* Title */}
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-slate-600">Title *</label>
+                              <input
+                                type="text"
+                                value={lesson.title}
+                                onChange={(e) =>
+                                  setLessons((prev) =>
+                                    prev.map((l) => (l.id === lesson.id ? { ...l, title: e.target.value } : l))
+                                  )
+                                }
+                                placeholder="e.g. Introduction to Calculus"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary-900/20 focus:border-primary-900 outline-none"
+                              />
+                            </div>
+
+                            {/* Video select */}
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-slate-600">Video *</label>
+                              <select
+                                value={lesson.videoFileId}
+                                onChange={(e) =>
+                                  setLessons((prev) =>
+                                    prev.map((l) => (l.id === lesson.id ? { ...l, videoFileId: e.target.value } : l))
+                                  )
+                                }
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary-900/20 focus:border-primary-900 outline-none bg-white"
+                              >
+                                <option value="">Select a video…</option>
+                                {availableVideos.map((v) => (
+                                  <option key={v.id} value={v.id}>
+                                    {v.name} ({formatBytes(v.size)})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Description */}
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-semibold mb-1 text-slate-600">Description</label>
+                              <input
+                                type="text"
+                                value={lesson.description}
+                                onChange={(e) =>
+                                  setLessons((prev) =>
+                                    prev.map((l) => (l.id === lesson.id ? { ...l, description: e.target.value } : l))
+                                  )
+                                }
+                                placeholder="Brief description of this lesson"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary-900/20 focus:border-primary-900 outline-none"
+                              />
+                            </div>
+
+                            {/* Document select (multi) */}
+                            {doneDocs.length > 0 && (
+                              <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold mb-1 text-slate-600">
+                                  Labsheet / Documents <span className="font-normal text-slate-400">(optional)</span>
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                  {doneDocs.map((doc) => {
+                                    const isSelected = lesson.documentFileIds.includes(doc.id);
+                                    return (
+                                      <button
+                                        key={doc.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setLessons((prev) =>
+                                            prev.map((l) => {
+                                              if (l.id !== lesson.id) return l;
+                                              const ids = isSelected
+                                                ? l.documentFileIds.filter((d) => d !== doc.id)
+                                                : [...l.documentFileIds, doc.id];
+                                              return { ...l, documentFileIds: ids };
+                                            })
+                                          );
+                                        }}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
+                                          isSelected
+                                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+                                        }`}
+                                      >
+                                        <span className="material-symbols-outlined text-sm">
+                                          {isSelected ? 'check_circle' : 'description'}
+                                        </span>
+                                        {doc.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Navigation */}
               <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100">
                 <button
@@ -873,13 +1221,63 @@ const TutorUploadPage: React.FC = () => {
                   <span className="material-symbols-outlined text-base">arrow_back</span>
                   Back
                 </button>
-                <button
-                  onClick={handleStep2Next}
-                  className="px-8 py-2.5 rounded-lg bg-primary-900 text-white font-bold text-sm hover:bg-primary-800 shadow-lg shadow-primary-900/20 transition flex items-center gap-2"
-                >
-                  Continue to Pricing
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </button>
+                {(() => {
+                  const hasVideo   = uploadedFiles.some((f) => f.kind === 'video' && f.status === 'done');
+                  const isUploading = uploadedFiles.some((f) => f.status === 'uploading');
+                  const hasLessons = lessons.length > 0 && lessons.every((l) => l.title.trim().length >= 3 && l.videoFileId);
+                  const canProceed  = hasVideo && !isUploading && hasLessons && !isCreatingLessons;
+                  return (
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={handleStep2Next}
+                        disabled={!canProceed}
+                        title={
+                          isUploading
+                            ? 'Wait for uploads to finish'
+                            : !hasVideo
+                            ? 'Upload at least one video lesson to continue'
+                            : !hasLessons
+                            ? 'Add and configure at least one lesson'
+                            : ''
+                        }
+                        className={`px-8 py-2.5 rounded-lg font-bold text-sm transition flex items-center gap-2
+                          ${canProceed
+                            ? 'bg-primary-900 text-white hover:bg-primary-800 shadow-lg shadow-primary-900/20'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          }`}
+                      >
+                        {isCreatingLessons ? (
+                          <>
+                            <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                            Creating Lessons…
+                          </>
+                        ) : isUploading ? (
+                          <>
+                            <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                            Uploading…
+                          </>
+                        ) : (
+                          <>
+                            Continue to Pricing
+                            <span className="material-symbols-outlined text-base">arrow_forward</span>
+                          </>
+                        )}
+                      </button>
+                      {!hasVideo && !isUploading && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">info</span>
+                          At least one video lesson is required
+                        </p>
+                      )}
+                      {hasVideo && !hasLessons && !isUploading && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">info</span>
+                          Organize your content into lessons
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </section>
           )}

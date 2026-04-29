@@ -7,6 +7,7 @@ export interface ILesson extends Document {
   order: number;
   duration: number;
   videoId?: mongoose.Types.ObjectId;
+  documentIds?: mongoose.Types.ObjectId[];
   content?: string;
   isFree: boolean;
   createdAt: Date;
@@ -48,6 +49,10 @@ const lessonSchema = new Schema<ILesson>(
       type: Schema.Types.ObjectId,
       ref: 'Video',
     },
+    documentIds: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Document',
+    }],
     content: {
       type: String,
       trim: true,

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { courseController } from './course.controller.js';
-import { authenticate, authorize } from '../../shared/middleware/auth.js';
+import { authenticate, authorize, optionalAuth } from '../../shared/middleware/auth.js';
 import { validateBody } from '../../shared/middleware/validate.js';
 import {
   courseCreateSchema,
@@ -19,11 +19,23 @@ const router = Router();
 router.get('/', courseController.getCourses.bind(courseController));
 
 /**
+ * @route   GET /api/v1/courses/my/courses
+ * @desc    Get all courses created by the authenticated tutor
+ * @access  Private (Tutor only)
+ */
+router.get(
+  '/my/courses',
+  authenticate,
+  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
+  courseController.getTutorCourses.bind(courseController)
+);
+
+/**
  * @route   GET /api/v1/courses/:courseId
  * @desc    Get course by ID
  * @access  Public (published) / Private (drafts - owner only)
  */
-router.get('/:courseId', courseController.getCourseById.bind(courseController));
+router.get('/:courseId', optionalAuth, courseController.getCourseById.bind(courseController));
 
 /**
  * @route   POST /api/v1/courses
@@ -64,23 +76,11 @@ router.delete(
 );
 
 /**
- * @route   GET /api/v1/courses/my/courses
- * @desc    Get all courses created by the authenticated tutor
- * @access  Private (Tutor only)
- */
-router.get(
-  '/my/courses',
-  authenticate,
-  authorize([USER_ROLES.TUTOR, USER_ROLES.ADMIN]),
-  courseController.getTutorCourses.bind(courseController)
-);
-
-/**
  * @route   GET /api/v1/courses/:courseId/lessons
  * @desc    Get all lessons for a course
  * @access  Public (published courses) / Private (owner for drafts)
  */
-router.get('/:courseId/lessons', courseController.getCourseLessons.bind(courseController));
+router.get('/:courseId/lessons', optionalAuth, courseController.getCourseLessons.bind(courseController));
 
 /**
  * @route   POST /api/v1/courses/:courseId/lessons

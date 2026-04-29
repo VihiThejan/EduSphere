@@ -8,7 +8,7 @@ export const errorHandler = (
   error: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   if (error instanceof AppError) {
     // Operational errors - send to client

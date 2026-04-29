@@ -22,6 +22,30 @@ export interface StudentDashboardEnrollment {
   remainingLessons: number;
 }
 
+export interface MyLearningEnrollment {
+  enrollment: {
+    _id: string;
+    status: string;
+    enrolledAt: string;
+    completedAt?: string;
+    progressPercentage: number;
+    lastAccessedAt: string;
+    certificateIssued: boolean;
+  };
+  course: {
+    _id: string;
+    title: string;
+    thumbnail?: string;
+    instructorName?: string;
+    totalLessons: number;
+    category?: string;
+    level?: string;
+  };
+  completedLessons: number;
+  remainingLessons: number;
+  hasStarted: boolean;
+}
+
 export interface StudentDashboardData {
   enrollments: StudentDashboardEnrollment[];
   recommendedCourses: Course[];
@@ -51,23 +75,42 @@ export const dashboardApi = {
       const enrollments = enrollmentsResponse?.enrollments ?? [];
       const recommendedCourses = coursesResponse?.courses ?? [];
 
-      if (enrollments.length === 0 && recommendedCourses.length === 0) {
-        return {
-          enrollments: dashboardData.enrollments,
-          recommendedCourses: getMockRecommendations(),
-        };
-      }
-
       return {
-        enrollments: enrollments.length > 0 ? enrollments : dashboardData.enrollments,
+        enrollments,
         recommendedCourses:
           recommendedCourses.length > 0 ? recommendedCourses : getMockRecommendations(),
       };
     } catch {
       return {
-        enrollments: dashboardData.enrollments,
+        enrollments: [],
         recommendedCourses: getMockRecommendations(),
       };
     }
+  },
+
+  getMyLearning: async (status?: string): Promise<MyLearningEnrollment[]> => {
+    try {
+      const params: Record<string, string> = {};
+      if (status) params.status = status;
+      const response = await apiClient.get<{ enrollments: MyLearningEnrollment[] }>(
+        '/enrollments/my-learning',
+        params
+      );
+      return response?.enrollments ?? [];
+    } catch {
+      return [];
+    }
+  },
+
+  dropCourse: async (courseId: string): Promise<void> => {
+    await apiClient.patch(`/enrollments/courses/${encodeURIComponent(courseId)}/drop`);
+  },
+
+  reEnrollCourse: async (courseId: string): Promise<void> => {
+    await apiClient.patch(`/enrollments/courses/${encodeURIComponent(courseId)}/re-enroll`);
+  },
+
+  deleteEnrollment: async (courseId: string): Promise<void> => {
+    await apiClient.delete(`/enrollments/courses/${encodeURIComponent(courseId)}`);
   },
 };
