@@ -35,15 +35,6 @@ export interface SellerSubscriptionStatusResult {
   remainingListings: number;
 }
 
-type StripeSubscriptionWithPeriodEnd = Stripe.Subscription & {
-  current_period_end?: number;
-};
-
-type StripeInvoiceWithSubscription = Stripe.Invoice & {
-  subscription?: string | { id: string };
-  payment_intent?: string;
-  period_end?: number;
-};
 
 export class VendorBillingService {
   private stripe: Stripe | null = null;
@@ -60,55 +51,31 @@ export class VendorBillingService {
     return this.stripe;
   }
 
-  private getPlanConfig(tier: VendorPlanTier): { amountLkr: number; listingQuota: number; stripePriceId: string } {
-    const planEnv = {
-      [VENDOR_PLAN_TIERS.STARTER]: {
-        amountLkr: parseInt(process.env.VENDOR_PLAN_STARTER_LKR || '1500', 10),
-        stripePriceId: process.env.STRIPE_VENDOR_STARTER_PRICE_ID || '',
-      },
-      [VENDOR_PLAN_TIERS.PRO]: {
-        amountLkr: parseInt(process.env.VENDOR_PLAN_PRO_LKR || '4500', 10),
-        stripePriceId: process.env.STRIPE_VENDOR_PRO_PRICE_ID || '',
-      },
-      [VENDOR_PLAN_TIERS.ELITE]: {
-        amountLkr: parseInt(process.env.VENDOR_PLAN_ELITE_LKR || '9000', 10),
-        stripePriceId: process.env.STRIPE_VENDOR_ELITE_PRICE_ID || '',
-      },
+  private getPlanConfig(tier: VendorPlanTier): { amountLkr: number; listingQuota: number; label: string } {
+    const amounts = {
+      [VENDOR_PLAN_TIERS.STARTER]: parseInt(process.env.VENDOR_PLAN_STARTER_LKR || '1500', 10),
+      [VENDOR_PLAN_TIERS.PRO]:     parseInt(process.env.VENDOR_PLAN_PRO_LKR     || '4500', 10),
+      [VENDOR_PLAN_TIERS.ELITE]:   parseInt(process.env.VENDOR_PLAN_ELITE_LKR   || '9000', 10),
     };
-
-    const selected = planEnv[tier];
-    if (!selected.stripePriceId) {
-      throw new ValidationError(`Stripe price id is missing for vendor tier: ${tier}`);
-    }
-
+    const labels = {
+      [VENDOR_PLAN_TIERS.STARTER]: 'Starter Plan (5 listings / 30 days)',
+      [VENDOR_PLAN_TIERS.PRO]:     'Pro Plan (20 listings / 30 days)',
+      [VENDOR_PLAN_TIERS.ELITE]:   'Elite Plan (100 listings / 30 days)',
+    };
     return {
-      amountLkr: selected.amountLkr,
+      amountLkr: amounts[tier],
       listingQuota: VENDOR_PLAN_QUOTAS[tier],
-      stripePriceId: selected.stripePriceId,
+      label: labels[tier],
     };
   }
 
   private async ensurePlanDocument(tier: VendorPlanTier) {
-    const existing = await VendorPlan.findOne({ tier, interval: VENDOR_PLAN_INTERVAL.MONTHLY });
     const planConfig = this.getPlanConfig(tier);
-
-    if (existing) {
-      existing.amountLkr = planConfig.amountLkr;
-      existing.listingQuota = planConfig.listingQuota;
-      existing.stripePriceId = planConfig.stripePriceId;
-      existing.isActive = true;
-      await existing.save();
-      return existing;
-    }
-
-    return VendorPlan.create({
-      tier,
-      interval: VENDOR_PLAN_INTERVAL.MONTHLY,
-      amountLkr: planConfig.amountLkr,
-      listingQuota: planConfig.listingQuota,
-      stripePriceId: planConfig.stripePriceId,
-      isActive: true,
-    });
+    return VendorPlan.findOneAndUpdate(
+      { tier },
+      { tier, interval: VENDOR_PLAN_INTERVAL.MONTHLY, amountLkr: planConfig.amountLkr, listingQuota: planConfig.listingQuota, isActive: true },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
   }
 
   async createSubscriptionCheckout(
@@ -128,6 +95,7 @@ export class VendorBillingService {
     }
 
     const plan = await this.ensurePlanDocument(tier);
+    const planConfig = this.getPlanConfig(tier);
 
     const existingSub = await VendorSubscription.findOne({ sellerId });
     if (
@@ -140,17 +108,27 @@ export class VendorBillingService {
     }
 
     const stripe = this.getStripeClient();
+
+    // Use one-time payment with inline price_data — no pre-created Stripe Price IDs required.
+    // On checkout.session.completed we activate the subscription for 30 days.
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+      mode: 'payment',
       line_items: [
         {
-          price: plan.stripePriceId,
+          price_data: {
+            currency: 'lkr',
+            product_data: {
+              name: `EduSphere Vendor — ${planConfig.label}`,
+              description: `Grants ${planConfig.listingQuota} active marketplace listings for 30 days.`,
+            },
+            // LKR is a standard 2-decimal currency in Stripe → multiply by 100
+            unit_amount: plan.amountLkr * 100,
+          },
           quantity: 1,
         },
       ],
       success_url: returnUrl || `${config.cors.origin}/seller/billing?checkout=success`,
       cancel_url: cancelUrl || `${config.cors.origin}/seller/billing?checkout=cancelled`,
-      allow_promotion_codes: true,
       metadata: {
         sellerId,
         tier,
@@ -277,16 +255,6 @@ export class VendorBillingService {
       case 'checkout.session.completed':
         await this.onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         break;
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await this.onSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
-      case 'invoice.payment_failed':
-        await this.onInvoicePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
-      case 'invoice.payment_succeeded':
-        await this.onInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
       default:
         logger.info('Unhandled vendor billing webhook event type', { type: event.type });
     }
@@ -307,41 +275,19 @@ export class VendorBillingService {
     return parsed as Stripe.Event;
   }
 
-  private mapStripeSubscriptionStatus(status: Stripe.Subscription.Status): VendorSubscriptionStatus {
-    if (status === 'active' || status === 'trialing') {
-      return VENDOR_SUBSCRIPTION_STATUS.ACTIVE;
-    }
-
-    if (status === 'past_due') {
-      return VENDOR_SUBSCRIPTION_STATUS.PAST_DUE;
-    }
-
-    if (status === 'unpaid') {
-      return VENDOR_SUBSCRIPTION_STATUS.UNPAID;
-    }
-
-    if (status === 'canceled' || status === 'incomplete_expired') {
-      return VENDOR_SUBSCRIPTION_STATUS.CANCELED;
-    }
-
-    return VENDOR_SUBSCRIPTION_STATUS.INACTIVE;
-  }
 
   private async onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-    if (session.mode !== 'subscription') {
-      return;
-    }
-
     const sellerId = session.metadata?.sellerId;
     const tier = session.metadata?.tier as VendorPlanTier | undefined;
 
-    if (!sellerId || !tier || !session.subscription) {
+    if (!sellerId || !tier) {
       logger.warn('Invalid vendor checkout session metadata', { sessionId: session.id });
       return;
     }
 
-    const stripeSubscriptionId =
-      typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
+    const now = new Date();
+    // 30-day access window (one-time payment demo mode)
+    const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     await VendorSubscription.findOneAndUpdate(
       { sellerId },
@@ -350,72 +296,22 @@ export class VendorBillingService {
         tier,
         interval: VENDOR_PLAN_INTERVAL.MONTHLY,
         status: VENDOR_SUBSCRIPTION_STATUS.ACTIVE,
-        stripeCustomerId:
-          typeof session.customer === 'string' ? session.customer : undefined,
-        stripeSubscriptionId,
+        stripeCustomerId: typeof session.customer === 'string' ? session.customer : undefined,
         stripeCheckoutSessionId: session.id,
-        startedAt: new Date(),
+        startedAt: now,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd: false,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    // Also activate the user's marketplace seller role
+    await UserModel.findByIdAndUpdate(sellerId, {
+      isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
+    });
   }
 
-  private async onSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-    const mappedStatus = this.mapStripeSubscriptionStatus(subscription.status);
-    const currentPeriodEndUnix = (subscription as StripeSubscriptionWithPeriodEnd).current_period_end;
-
-    await VendorSubscription.findOneAndUpdate(
-      { stripeSubscriptionId: subscription.id },
-      {
-        status: mappedStatus,
-        currentPeriodEnd: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000) : undefined,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      },
-      { new: true }
-    );
-  }
-
-  private async onInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionRef = (invoice as StripeInvoiceWithSubscription).subscription;
-    if (!subscriptionRef) {
-      return;
-    }
-
-    const stripeSubscriptionId =
-      typeof subscriptionRef === 'string' ? subscriptionRef : subscriptionRef.id;
-
-    await VendorSubscription.findOneAndUpdate(
-      { stripeSubscriptionId },
-      {
-        status: VENDOR_SUBSCRIPTION_STATUS.PAST_DUE,
-      },
-      { new: false }
-    );
-  }
-
-  private async onInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionRef = (invoice as StripeInvoiceWithSubscription).subscription;
-    if (!subscriptionRef) {
-      return;
-    }
-
-    const stripeSubscriptionId =
-      typeof subscriptionRef === 'string' ? subscriptionRef : subscriptionRef.id;
-
-    const paymentIntentRef = (invoice as StripeInvoiceWithSubscription).payment_intent;
-    const paymentIntentId = typeof paymentIntentRef === 'string' ? paymentIntentRef : undefined;
-    const periodEndUnix = (invoice as StripeInvoiceWithSubscription).period_end;
-
-    await VendorSubscription.findOneAndUpdate(
-      { stripeSubscriptionId },
-      {
-        status: VENDOR_SUBSCRIPTION_STATUS.ACTIVE,
-        currentPeriodEnd: periodEndUnix ? new Date(periodEndUnix * 1000) : undefined,
-        latestPaymentIntentId: paymentIntentId,
-      },
-      { new: false }
-    );
-  }
 }
 
 export const vendorBillingService = new VendorBillingService();

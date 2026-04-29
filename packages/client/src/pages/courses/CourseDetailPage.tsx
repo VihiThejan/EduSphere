@@ -20,12 +20,19 @@ import {
   Star,
   TrendingUp,
   Users,
+  GraduationCap,
 } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { Course, Lesson, USER_ROLES } from '@edusphere/shared';
 import { AppFooter, AppHeader, AppNavItem, AppSidebar } from '@/components/common';
 import { coursesApi } from '@/services/api/courses.api';
+import { analyticsApi } from '@/services/api/analytics.api';
 import { useAuthStore } from '@/store/authStore';
 import { config } from '@/config';
+import CourseCheckoutModal from '@/components/courses/CourseCheckoutModal';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +89,8 @@ const CourseDetailPage: React.FC = () => {
   const [expandedLessonId, setExpandedLessonId] = React.useState<string | null>(null);
   const [completedLessonIds, setCompletedLessonIds] = React.useState<Set<string>>(new Set());
   const [markingLessonId, setMarkingLessonId] = React.useState<string | null>(null);
+  const [showCheckoutModal, setShowCheckoutModal] = React.useState(false);
+  const [downloadingCert, setDownloadingCert] = React.useState(false);
   /** Store video refs keyed by lessonId for interval-based saves */
   const videoRefs = React.useRef<Map<string, HTMLVideoElement>>(new Map());
   /** Track active save intervals per lesson */
@@ -303,7 +312,63 @@ const CourseDetailPage: React.FC = () => {
       setFeedbackMessage('Only student accounts can enroll in courses.');
       return;
     }
+    // Paid course → open checkout modal
+    const price = course?.pricing.discountPrice ?? course?.pricing.amount ?? 0;
+    if (price > 0) {
+      setShowCheckoutModal(true);
+      return;
+    }
+    // Free course → enroll directly
     enrollMutation.mutate();
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!courseId || !course) return;
+    setDownloadingCert(true);
+    try {
+      const cert = await analyticsApi.getCertificate(courseId);
+      // Build a simple printable certificate page
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Certificate of Completion</title>
+  <style>
+    body { font-family: Georgia, serif; background: #f8f7f2; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .cert { background: white; border: 8px double #1e3a5f; padding: 60px 80px; max-width: 740px; text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,.12); }
+    .cert h1 { font-size: 2.8rem; color: #1e3a5f; margin-bottom: 8px; }
+    .cert .sub { font-size: 1.1rem; color: #666; margin-bottom: 36px; }
+    .cert .name { font-size: 2.2rem; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; display: inline-block; padding-bottom: 4px; margin: 12px 0 28px; }
+    .cert .course { font-size: 1.5rem; font-weight: bold; color: #333; margin-bottom: 12px; }
+    .cert .meta { font-size: 0.9rem; color: #888; margin-top: 24px; }
+    .cert .badge { display: inline-block; background: #1e3a5f; color: white; padding: 6px 20px; border-radius: 999px; font-size: 0.85rem; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="cert">
+    <h1>Certificate of Completion</h1>
+    <p class="sub">This is to certify that</p>
+    <div class="name">${cert.studentName}</div>
+    <p>has successfully completed the course</p>
+    <div class="course">${cert.courseTitle}</div>
+    <p>Instructor: ${cert.instructorName} &nbsp;|&nbsp; Level: ${cert.level}</p>
+    <p class="meta">Completed on ${new Date(cert.completedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <div class="badge">EduSphere Verified</div>
+  </div>
+</body>
+</html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Certificate_${course.title.replace(/\s+/g, '_')}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setFeedbackMessage(err?.response?.data?.error?.message ?? 'Could not generate certificate. Complete all lessons first.');
+    } finally {
+      setDownloadingCert(false);
+    }
   };
 
   // ── render helpers ─────────────────────────────────────────────────────────
@@ -548,7 +613,7 @@ const CourseDetailPage: React.FC = () => {
         <AppSidebar
           primaryItems={sidebarPrimaryItems}
           secondaryItems={sidebarSecondaryItems}
-          streakDays={14}
+          streakDays={0}
         />
 
         <main className="flex flex-1 flex-col min-w-0">
@@ -790,6 +855,18 @@ const CourseDetailPage: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Certificate download — only at 100% */}
+                        {progressPercent >= 100 && (
+                          <button
+                            onClick={() => void handleDownloadCertificate()}
+                            disabled={downloadingCert}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-500 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                          >
+                            <GraduationCap size={15} />
+                            {downloadingCert ? 'Generating…' : 'Download Certificate'}
+                          </button>
+                        )}
+
                         <Link
                           to="/dashboard"
                           className="block w-full rounded-xl bg-emerald-600 py-3 text-center text-sm font-bold text-white transition hover:bg-emerald-700"
@@ -863,6 +940,27 @@ const CourseDetailPage: React.FC = () => {
       </div>
 
       <AppFooter />
+
+      {/* Checkout modal for paid courses */}
+      {showCheckoutModal && course && courseId && (
+        <Elements stripe={stripePromise}>
+          <CourseCheckoutModal
+            courseId={courseId}
+            courseTitle={course.title}
+            priceAmount={course.pricing.discountPrice ?? course.pricing.amount}
+            priceCurrency={course.pricing.currency}
+            onClose={() => setShowCheckoutModal(false)}
+            onEnrolled={() => {
+              setShowCheckoutModal(false);
+              setEnrolled(true);
+              setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
+              void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+              void queryClient.invalidateQueries({ queryKey: ['enrollment-check', courseId] });
+              void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
+            }}
+          />
+        </Elements>
+      )}
     </div>
   );
 };

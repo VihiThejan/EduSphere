@@ -44,7 +44,6 @@ const vendorPlanSchema = new Schema<IVendorPlanDocument>(
     },
     stripePriceId: {
       type: String,
-      required: true,
       trim: true,
     },
     isActive: {
