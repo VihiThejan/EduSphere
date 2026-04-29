@@ -119,6 +119,127 @@ class EmailService {
     }
   }
 
+  async sendOrderConfirmationEmail(
+    to: string,
+    firstName: string,
+    orderNumber: string,
+    total: number
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">Order Confirmed, ${firstName}!</h2>
+        <p>Thanks for your purchase on EduSphere. Your order <strong>#${orderNumber}</strong> has been received and is being processed.</p>
+        <p><strong>Total paid:</strong> $${total.toFixed(2)}</p>
+        <a href="${config.clientUrl}/orders"
+           style="display:inline-block;padding:12px 28px;background:#1e293b;color:#fff;
+                  text-decoration:none;border-radius:6px;font-weight:600;margin:16px 0">
+          View My Orders
+        </a>
+        <p style="color:#6b7280;font-size:13px;">The seller will be in touch about pickup or delivery.</p>
+      </div>
+    `;
+
+    const transporter = await this.getTransporter();
+    const info = await transporter.sendMail({
+      from: config.email.from,
+      to,
+      subject: `EduSphere — Order #${orderNumber} confirmed`,
+      html,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) logger.info(`Order confirmation email preview: ${previewUrl}`);
+  }
+
+  async sendNewSaleEmail(
+    to: string,
+    sellerFirstName: string,
+    orderNumber: string,
+    subtotal: number
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">You have a new sale, ${sellerFirstName}!</h2>
+        <p>Order <strong>#${orderNumber}</strong> has been paid. Your earnings: <strong>$${subtotal.toFixed(2)}</strong>.</p>
+        <a href="${config.clientUrl}/seller/orders"
+           style="display:inline-block;padding:12px 28px;background:#1e293b;color:#fff;
+                  text-decoration:none;border-radius:6px;font-weight:600;margin:16px 0">
+          Manage Orders
+        </a>
+        <p style="color:#6b7280;font-size:13px;">Please arrange pickup/delivery with the buyer at your earliest convenience.</p>
+      </div>
+    `;
+
+    const transporter = await this.getTransporter();
+    const info = await transporter.sendMail({
+      from: config.email.from,
+      to,
+      subject: `EduSphere — New sale: Order #${orderNumber}`,
+      html,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) logger.info(`New sale email preview: ${previewUrl}`);
+  }
+
+  async sendEnrollmentConfirmationEmail(
+    to: string,
+    firstName: string,
+    courseTitle: string
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">You're enrolled, ${firstName}!</h2>
+        <p>You have successfully enrolled in <strong>${courseTitle}</strong>. Start learning now!</p>
+        <a href="${config.clientUrl}/dashboard"
+           style="display:inline-block;padding:12px 28px;background:#1e293b;color:#fff;
+                  text-decoration:none;border-radius:6px;font-weight:600;margin:16px 0">
+          Go to Dashboard
+        </a>
+      </div>
+    `;
+
+    const transporter = await this.getTransporter();
+    const info = await transporter.sendMail({
+      from: config.email.from,
+      to,
+      subject: `EduSphere — Enrolled in "${courseTitle}"`,
+      html,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) logger.info(`Enrollment confirmation email preview: ${previewUrl}`);
+  }
+
+  async sendListingPublishedEmail(
+    to: string,
+    firstName: string,
+    listingTitle: string
+  ): Promise<void> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">Your listing is live, ${firstName}!</h2>
+        <p><strong>"${listingTitle}"</strong> is now published on the EduSphere marketplace.</p>
+        <a href="${config.clientUrl}/marketplace"
+           style="display:inline-block;padding:12px 28px;background:#1e293b;color:#fff;
+                  text-decoration:none;border-radius:6px;font-weight:600;margin:16px 0">
+          View Marketplace
+        </a>
+      </div>
+    `;
+
+    const transporter = await this.getTransporter();
+    const info = await transporter.sendMail({
+      from: config.email.from,
+      to,
+      subject: `EduSphere — "${listingTitle}" is now live`,
+      html,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) logger.info(`Listing published email preview: ${previewUrl}`);
+  }
+
   async sendWelcomeEmail(to: string, firstName: string): Promise<void> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

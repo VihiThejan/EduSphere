@@ -12,6 +12,8 @@ import {
   ORDER_FULFILLMENT_STATUS,
 } from '@edusphere/shared';
 import { logger } from '../../shared/utils/logger.js';
+import { UserModel } from '../users/user.model.js';
+import { emailService } from '../../shared/utils/email.service.js';
 
 export interface PaymentIntentResult {
   orderId: string;
@@ -219,6 +221,32 @@ export class PaymentService {
     }
 
     await orderService.confirmPayment(order._id.toString(), paymentIntentId);
+
+    // Send transactional emails (fire-and-forget)
+    const [buyer, seller] = await Promise.all([
+      UserModel.findById(order.buyerId).select('email profile'),
+      UserModel.findById(order.sellerId).select('email profile'),
+    ]);
+    if (buyer) {
+      emailService
+        .sendOrderConfirmationEmail(
+          buyer.email,
+          buyer.profile.firstName,
+          order.orderNumber,
+          order.total
+        )
+        .catch((err) => logger.warn('Failed to send buyer order confirmation email', { err }));
+    }
+    if (seller) {
+      emailService
+        .sendNewSaleEmail(
+          seller.email,
+          seller.profile.firstName,
+          order.orderNumber,
+          order.subtotal
+        )
+        .catch((err) => logger.warn('Failed to send seller new sale email', { err }));
+    }
   }
 
   private async onPaymentFailed(paymentIntentId: string): Promise<void> {

@@ -32,6 +32,7 @@ import SellerEditListingPage from './pages/seller/SellerEditListingPage';
 import SellerProfilePage from './pages/seller/SellerProfilePage';
 import SellerRouteGate from './components/seller/SellerRouteGate';
 import LiveSessionPage from './pages/live/LiveSessionPage';
+import MyLearningPage from './pages/MyLearningPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -233,6 +234,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <TutorUploadPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* My Learning */}
+          <Route
+            path="/my-learning"
+            element={
+              <ProtectedRoute>
+                <MyLearningPage />
               </ProtectedRoute>
             }
           />

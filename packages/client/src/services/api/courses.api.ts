@@ -57,6 +57,30 @@ export interface LessonWatchProgress {
   lastWatchedAt: string | null;
 }
 
+export interface MyLearningItem {
+  enrollment: {
+    _id: string;
+    status: string;
+    enrolledAt: string;
+    completedAt?: string;
+    progressPercentage: number;
+    lastAccessedAt: string;
+    certificateIssued: boolean;
+  };
+  course: {
+    _id: string;
+    title: string;
+    thumbnail?: string;
+    instructorName?: string;
+    totalLessons: number;
+    category?: string;
+    level?: string;
+  };
+  completedLessons: number;
+  remainingLessons: number;
+  hasStarted: boolean;
+}
+
 const asCourses = mockCourses as unknown as Course[];
 const asLessonsByCourse = mockLessonsByCourse as unknown as Record<string, Lesson[]>;
 
@@ -203,6 +227,16 @@ export const coursesApi = {
       `/enrollments/courses/${courseId}/lessons/${lessonId}/watch-progress`,
       { watchedPosition, videoDuration }
     );
+  },
+
+  getMyLearning: async (status?: string): Promise<MyLearningItem[]> => {
+    try {
+      const params = status ? { status } : {};
+      const response = await apiClient.get<{ enrollments: MyLearningItem[] }>('/enrollments/my-learning', params);
+      return Array.isArray(response?.enrollments) ? response.enrollments : [];
+    } catch {
+      return [];
+    }
   },
 
   getLessonWatchProgress: async (

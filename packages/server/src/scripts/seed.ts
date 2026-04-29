@@ -14,6 +14,9 @@ import { logger } from '../shared/utils/logger';
  * Run with: npm run seed  (from packages/server)
  */
 
+const slugify = (text: string) =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
 async function clearDatabase() {
   logger.info('🧹 Clearing existing data...');
   await MarketplaceItem.deleteMany({});
@@ -125,6 +128,7 @@ async function seedCourses(users: any[]) {
   const courses = await CourseModel.create([
     // ── Programming ──────────────────────────────────────────────────
     {
+      slug: 'full-stack-web-development-mern-stack',
       title: 'Full-Stack Web Development with MERN Stack',
       description:
         'Master the MERN stack end-to-end. You will build real-world applications using MongoDB, Express.js, React, and Node.js. By the end of this course you will confidently architect, build, and deploy production-ready full-stack applications.\n\nTopics covered: REST API design, authentication with JWT, React state management, Mongoose ODM, deployment on cloud platforms, and more.',
@@ -140,6 +144,7 @@ async function seedCourses(users: any[]) {
       stats: { enrollmentCount: 152, avgRating: 4.7, reviewCount: 38 },
     },
     {
+      slug: 'introduction-to-python-programming',
       title: 'Introduction to Python Programming',
       description:
         'A beginner-friendly journey into programming with Python. No prior experience required. You will learn variables, data types, loops, functions, and file I/O — then apply them in a final mini-project.\n\nPerfect for students stepping into software development for the first time.',
@@ -155,6 +160,7 @@ async function seedCourses(users: any[]) {
       stats: { enrollmentCount: 410, avgRating: 4.9, reviewCount: 87 },
     },
     {
+      slug: 'react-advanced-patterns-best-practices',
       title: 'React Advanced Patterns and Best Practices',
       description:
         'Take your React skills to the next level. Dive deep into custom hooks, compound components, render props, context architecture, and performance tuning with useMemo, useCallback, and React.memo.\n\nIncludes a capstone project building a performant dashboard application.',
@@ -171,6 +177,7 @@ async function seedCourses(users: any[]) {
     },
     // ── Mathematics ──────────────────────────────────────────────────
     {
+      slug: 'calculus-for-engineering-students',
       title: 'Calculus for Engineering Students',
       description:
         'A rigorous yet approachable treatment of differential and integral calculus tailored for engineering undergraduates. Covers limits, derivatives, integrals, and their engineering applications including area-under-curve, optimisation problems, and differential equations.',
@@ -186,6 +193,7 @@ async function seedCourses(users: any[]) {
       stats: { enrollmentCount: 203, avgRating: 4.6, reviewCount: 52 },
     },
     {
+      slug: 'linear-algebra-essentials',
       title: 'Linear Algebra Essentials',
       description:
         'Vectors, matrices, determinants, eigenvalues, and linear transformations explained clearly with visualisation-first teaching. This course is essential for anyone heading into machine learning, computer graphics, or data science.',
@@ -202,6 +210,7 @@ async function seedCourses(users: any[]) {
     },
     // ── Data Science / Programming ────────────────────────────────────
     {
+      slug: 'machine-learning-fundamentals',
       title: 'Machine Learning Fundamentals',
       description:
         'Understand how machines learn. This course walks you through supervised and unsupervised learning, feature engineering, model evaluation, and common pitfalls. Implemented in Python with scikit-learn, pandas, and matplotlib.\n\nCulminating project: build a predictive model and evaluate it with real dataset.',
@@ -218,6 +227,7 @@ async function seedCourses(users: any[]) {
     },
     // ── Business ─────────────────────────────────────────────────────
     {
+      slug: 'microeconomics-for-business-students',
       title: 'Microeconomics for Business Students',
       description:
         'Understand how markets work. This course covers supply and demand, consumer behaviour, firm theory, pricing strategies, market structures, and game theory fundamentals — all with real Sri Lankan and global business examples.',
@@ -234,6 +244,7 @@ async function seedCourses(users: any[]) {
     },
     // ── Physics ──────────────────────────────────────────────────────
     {
+      slug: 'classical-mechanics-newton-to-lagrange',
       title: 'Classical Mechanics: From Newton to Lagrange',
       description:
         'A complete first-year university physics course covering kinematics, Newton\'s laws, energy, momentum, rotational motion, and an introduction to Lagrangian mechanics. Includes worked examples and practice problem sets.',
@@ -250,6 +261,7 @@ async function seedCourses(users: any[]) {
     },
     // ── Design ───────────────────────────────────────────────────────
     {
+      slug: 'ui-ux-design-fundamentals-figma',
       title: 'UI/UX Design Fundamentals with Figma',
       description:
         'Learn to design beautiful, user-centred interfaces from scratch using Figma. Topics include design principles, typography, colour theory, wireframing, prototyping, and design handoff.\n\nBy the end you will have a portfolio-ready mobile app UI case study.',

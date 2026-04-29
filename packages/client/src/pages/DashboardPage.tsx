@@ -77,7 +77,7 @@ const DashboardPage: React.FC = () => {
   const primaryItems: AppNavItem[] = [
     { label: 'Dashboard', href: '#', active: true, icon: LayoutDashboard },
     { label: 'Courses', href: '/courses', icon: BookOpen },
-    { label: 'My Learning', href: '#my-learning', icon: Clock3 },
+    { label: 'My Learning', href: '/my-learning', icon: Clock3 },
     { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     { label: 'Listings', href: '#', icon: ListChecks },
     { label: 'Live Sessions', href: '/live', icon: Radio },

@@ -13,6 +13,8 @@ import {
   MARKETPLACE_LISTING_PUBLISH_STATUS,
 } from '@edusphere/shared';
 import { vendorBillingService } from '../vendor-billing/vendor-billing.service.js';
+import { emailService } from '../../shared/utils/email.service.js';
+import { logger } from '../../shared/utils/logger.js';
 
 interface PaginationResult<T> {
   data: T[];
@@ -298,6 +300,14 @@ export class MarketplaceService {
     listing.publishStatus = MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED;
     listing.publishGateReason = undefined;
     await listing.save();
+
+    // Send listing-published email (fire-and-forget)
+    const seller = await UserModel.findById(sellerId).select('email profile');
+    if (seller) {
+      emailService
+        .sendListingPublishedEmail(seller.email, seller.profile.firstName, listing.title)
+        .catch((err) => logger.warn('Failed to send listing published email', { err }));
+    }
 
     return listing;
   }

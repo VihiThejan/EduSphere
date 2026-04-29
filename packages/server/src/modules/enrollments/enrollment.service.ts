@@ -9,6 +9,9 @@ import {
 } from '../../shared/utils/errors.js';
 import { COURSE_STATUS, ENROLLMENT_STATUS } from '@edusphere/shared';
 import mongoose from 'mongoose';
+import { UserModel } from '../users/user.model.js';
+import { emailService } from '../../shared/utils/email.service.js';
+import { logger } from '../../shared/utils/logger.js';
 
 /** Auto-complete lesson when student has watched this percentage of the video */
 const AUTO_COMPLETE_THRESHOLD = 90;
@@ -65,6 +68,17 @@ export class EnrollmentService {
     await CourseModel.findByIdAndUpdate(courseId, {
       $inc: { 'stats.enrollmentCount': 1 },
     });
+
+    // Send enrollment confirmation email (fire-and-forget)
+    const [user, courseDoc] = await Promise.all([
+      UserModel.findById(userId).select('email profile'),
+      CourseModel.findById(courseId).select('title'),
+    ]);
+    if (user && courseDoc) {
+      emailService
+        .sendEnrollmentConfirmationEmail(user.email, user.profile.firstName, courseDoc.title)
+        .catch((err) => logger.warn('Failed to send enrollment email', { err }));
+    }
 
     return enrollment;
   }
@@ -315,7 +329,7 @@ export class EnrollmentService {
   /**
    * Get watch progress for a single lesson (used to resume video).
    */
-  async getLessonWatchProgress(userId: string, courseId: string, lessonId: string) {
+  async getLessonWatchProgress(userId: string, _courseId: string, lessonId: string) {
     const progress = await LessonProgressModel.findOne({ userId, lessonId });
 
     return {

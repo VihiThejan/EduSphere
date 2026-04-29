@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Stripe from 'stripe';
 import { Order, IOrderDocument } from './order.model.js';
 import { MarketplaceItem } from '../marketplace/marketplace.model.js';
 import {
@@ -13,6 +14,7 @@ import {
   OrderFulfillmentStatus,
 } from '@edusphere/shared';
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 
 interface CreateOrderInput {
   items: Array<{
@@ -161,7 +163,7 @@ export class OrderService {
   ): Promise<OrdersResult> {
     const { page = 1, limit = 10, status, fulfillmentStatus } = params;
 
-    const query: Record<string, any> = {
+    const query: Record<string, unknown> = {
       buyerId: new mongoose.Types.ObjectId(buyerId),
     };
 
@@ -190,7 +192,7 @@ export class OrderService {
   ): Promise<OrdersResult> {
     const { page = 1, limit = 10, fulfillmentStatus } = params;
 
-    const query: Record<string, any> = {
+    const query: Record<string, unknown> = {
       sellerId: new mongoose.Types.ObjectId(sellerId),
     };
 
@@ -325,10 +327,22 @@ export class OrderService {
 
     order.fulfillmentStatus = ORDER_FULFILLMENT_STATUS.CANCELLED;
 
-    // If payment was completed, need to process refund
+    // If payment was completed, issue Stripe refund
     if (order.paymentStatus === ORDER_PAYMENT_STATUS.COMPLETED) {
+      if (order.stripePaymentIntentId && config.stripe.secretKey) {
+        try {
+          const stripe = new Stripe(config.stripe.secretKey);
+          await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
+        } catch (err) {
+          logger.error('Stripe refund failed', {
+            orderId: order._id,
+            paymentIntentId: order.stripePaymentIntentId,
+            error: err instanceof Error ? err.message : 'Unknown error',
+          });
+          throw new ValidationError('Refund could not be processed. Please contact support.');
+        }
+      }
       order.paymentStatus = ORDER_PAYMENT_STATUS.REFUNDED;
-      // TODO: Implement refund logic with Stripe
     }
 
     // Restore inventory if payment was completed
