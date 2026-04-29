@@ -43,6 +43,12 @@ export const vendorBillingApi = {
     return apiClient.get<VendorSubscriptionStatusResponse>(`/vendor-billing/seller/${sellerId}/status`);
   },
 
+  verifyCheckout: async (sessionId: string): Promise<VendorSubscriptionStatusResponse> => {
+    return apiClient.post<VendorSubscriptionStatusResponse>('/vendor-billing/verify-checkout', {
+      sessionId,
+    });
+  },
+
   refundPaymentByAdmin: async (
     paymentIntentId: string,
     reason: string

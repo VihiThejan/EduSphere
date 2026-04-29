@@ -218,6 +218,31 @@ export class VendorBillingService {
     return { allowed: true };
   }
 
+  async verifyCheckoutSession(sessionId: string, sellerId: string): Promise<void> {
+    const stripe = this.getStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.metadata?.sellerId !== sellerId) {
+      throw new AuthorizationError('Checkout session does not belong to this seller');
+    }
+
+    if (session.payment_status !== 'paid') {
+      throw new ValidationError('Payment has not been completed for this session');
+    }
+
+    // Idempotent — if subscription already active from webhook, this is a no-op
+    const existingSub = await VendorSubscription.findOne({ sellerId });
+    if (
+      existingSub?.status === VENDOR_SUBSCRIPTION_STATUS.ACTIVE &&
+      existingSub.currentPeriodEnd &&
+      existingSub.currentPeriodEnd > new Date()
+    ) {
+      return;
+    }
+
+    await this.onCheckoutCompleted(session);
+  }
+
   async refundVendorPayment(paymentIntentId: string, reason: string): Promise<{ refundId: string }> {
     const stripe = this.getStripeClient();
     const refund = await stripe.refunds.create({

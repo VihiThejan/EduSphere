@@ -6,7 +6,19 @@ import { CourseModel } from '../modules/courses/course.model';
 import { LessonModel } from '../modules/courses/lesson.model';
 import { EnrollmentModel } from '../modules/enrollments/enrollment.model';
 import { MarketplaceItem } from '../modules/marketplace/marketplace.model';
-import { USER_ROLES, COURSE_STATUS, ENROLLMENT_STATUS } from '@edusphere/shared';
+import { SellerProfile } from '../modules/seller-profile/seller-profile.model';
+import { VendorSubscription } from '../modules/vendor-billing/vendor-subscription.model';
+import { VendorPlan } from '../modules/vendor-billing/vendor-plan.model';
+import {
+  USER_ROLES,
+  COURSE_STATUS,
+  ENROLLMENT_STATUS,
+  VENDOR_PLAN_TIERS,
+  VENDOR_PLAN_INTERVAL,
+  VENDOR_SUBSCRIPTION_STATUS,
+  VENDOR_PLAN_QUOTAS,
+  SELLER_VERIFICATION_STATUS,
+} from '@edusphere/shared';
 import { logger } from '../shared/utils/logger';
 
 /**
@@ -19,11 +31,14 @@ const slugify = (text: string) =>
 
 async function clearDatabase() {
   logger.info('🧹 Clearing existing data...');
+  await VendorSubscription.deleteMany({});
+  await VendorPlan.deleteMany({});
+  await SellerProfile.deleteMany({});
   await MarketplaceItem.deleteMany({});
-  await UserModel.deleteMany({});
-  await CourseModel.deleteMany({});
-  await LessonModel.deleteMany({});
   await EnrollmentModel.deleteMany({});
+  await LessonModel.deleteMany({});
+  await CourseModel.deleteMany({});
+  await UserModel.deleteMany({});
   logger.info('✅ Database cleared');
 }
 
@@ -38,6 +53,7 @@ async function seedUsers() {
       passwordHash,
       roles: [USER_ROLES.ADMIN, USER_ROLES.TUTOR],
       isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
       profile: {
         firstName: 'Admin',
         lastName: 'User',
@@ -50,6 +66,7 @@ async function seedUsers() {
       passwordHash,
       roles: [USER_ROLES.TUTOR],
       isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
       profile: {
         firstName: 'John',
         lastName: 'Smith',
@@ -62,6 +79,7 @@ async function seedUsers() {
       passwordHash,
       roles: [USER_ROLES.TUTOR],
       isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
       profile: {
         firstName: 'Sarah',
         lastName: 'Johnson',
@@ -74,6 +92,7 @@ async function seedUsers() {
       passwordHash,
       roles: [USER_ROLES.TUTOR],
       isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
       profile: {
         firstName: 'Priya',
         lastName: 'Nair',
@@ -114,10 +133,147 @@ async function seedUsers() {
         avatar: 'https://i.pravatar.cc/150?u=alex',
       },
     },
+    {
+      email: 'vendor@edusphere.com',
+      passwordHash,
+      roles: [USER_ROLES.SELLER],
+      isMarketplaceSeller: true,
+      marketplaceStatus: 'active',
+      profile: {
+        firstName: 'Vendor',
+        lastName: 'Demo',
+        bio: 'Demo marketplace seller account with an active Pro subscription.',
+        avatar: 'https://i.pravatar.cc/150?u=vendor',
+      },
+    },
   ]);
 
   logger.info(`✅ Created ${users.length} users`);
   return users;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function seedVendorData(users: any[]) {
+  logger.info('💳 Seeding vendor plans & subscriptions...');
+
+  const planAmounts = {
+    [VENDOR_PLAN_TIERS.STARTER]: 1500,
+    [VENDOR_PLAN_TIERS.PRO]:     4500,
+    [VENDOR_PLAN_TIERS.ELITE]:   9000,
+  };
+
+  for (const tier of Object.values(VENDOR_PLAN_TIERS)) {
+    await VendorPlan.findOneAndUpdate(
+      { tier },
+      {
+        tier,
+        interval: VENDOR_PLAN_INTERVAL.MONTHLY,
+        amountLkr: planAmounts[tier],
+        listingQuota: VENDOR_PLAN_QUOTAS[tier],
+        isActive: true,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  // Users that need an active subscription for demo purposes
+  const [admin, johnTutor, sarahTutor, priyaTutor, , , , vendor] = users;
+  const sellerUsers = [
+    { user: admin,      tier: VENDOR_PLAN_TIERS.ELITE },
+    { user: johnTutor,  tier: VENDOR_PLAN_TIERS.PRO   },
+    { user: sarahTutor, tier: VENDOR_PLAN_TIERS.PRO   },
+    { user: priyaTutor, tier: VENDOR_PLAN_TIERS.STARTER },
+    { user: vendor,     tier: VENDOR_PLAN_TIERS.PRO   },
+  ];
+
+  const now = new Date();
+  const periodEnd = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year for demo stability
+
+  for (const { user, tier } of sellerUsers) {
+    await VendorSubscription.findOneAndUpdate(
+      { sellerId: user._id },
+      {
+        sellerId: user._id,
+        tier,
+        interval: VENDOR_PLAN_INTERVAL.MONTHLY,
+        status: VENDOR_SUBSCRIPTION_STATUS.ACTIVE,
+        startedAt: now,
+        currentPeriodEnd: periodEnd,
+        cancelAtPeriodEnd: false,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
+  logger.info(`✅ Created vendor plans and ${sellerUsers.length} active subscriptions`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function seedSellerProfiles(users: any[]) {
+  logger.info('🏪 Seeding seller profiles...');
+
+  const [admin, johnTutor, sarahTutor, priyaTutor, , , , vendor] = users;
+
+  const profiles = [
+    {
+      userId: admin._id,
+      shopName: 'EduSphere Official Store',
+      shopDescription: 'Official platform store — curated stationery, accessories, and study materials.',
+      shopAvatar: 'https://i.pravatar.cc/150?u=admin',
+      rating: 4.9,
+      reviewCount: 12,
+      totalSales: 47,
+      responseTime: 'Within 1 hour',
+      verificationStatus: SELLER_VERIFICATION_STATUS.VERIFIED,
+    },
+    {
+      userId: johnTutor._id,
+      shopName: "John's Dev Corner",
+      shopDescription: 'Tech accessories, programming books, and course materials for CS students.',
+      shopAvatar: 'https://i.pravatar.cc/150?u=john',
+      rating: 4.8,
+      reviewCount: 34,
+      totalSales: 121,
+      responseTime: 'Within 2 hours',
+      verificationStatus: SELLER_VERIFICATION_STATUS.VERIFIED,
+    },
+    {
+      userId: sarahTutor._id,
+      shopName: "Sarah's Data Lab",
+      shopDescription: 'Data science notes, ML resources, and pre-owned laptops for university students.',
+      shopAvatar: 'https://i.pravatar.cc/150?u=sarah',
+      rating: 4.9,
+      reviewCount: 51,
+      totalSales: 203,
+      responseTime: 'Within 3 hours',
+      verificationStatus: SELLER_VERIFICATION_STATUS.VERIFIED,
+    },
+    {
+      userId: priyaTutor._id,
+      shopName: "Priya's Math & Science",
+      shopDescription: 'Past papers, lab equipment, and mathematics textbooks for engineering undergrads.',
+      shopAvatar: 'https://i.pravatar.cc/150?u=priya',
+      rating: 4.7,
+      reviewCount: 29,
+      totalSales: 88,
+      responseTime: 'Same day',
+      verificationStatus: SELLER_VERIFICATION_STATUS.VERIFIED,
+    },
+    {
+      userId: vendor._id,
+      shopName: 'Vendor Demo Shop',
+      shopDescription: 'Demo seller account — use this to test the marketplace selling workflow end-to-end.',
+      shopAvatar: 'https://i.pravatar.cc/150?u=vendor',
+      rating: 0,
+      reviewCount: 0,
+      totalSales: 0,
+      responseTime: 'N/A',
+      verificationStatus: SELLER_VERIFICATION_STATUS.UNVERIFIED,
+    },
+  ];
+
+  await SellerProfile.insertMany(profiles);
+  logger.info(`✅ Created ${profiles.length} seller profiles`);
 }
 
 async function seedCourses(users: any[]) {
@@ -682,6 +838,8 @@ async function seed() {
     await clearDatabase();
 
     const users = await seedUsers();
+    await seedVendorData(users);
+    await seedSellerProfiles(users);
     const courses = await seedCourses(users);
     const lessons = await seedLessons(courses);
     await seedEnrollments(users, courses, lessons);
@@ -690,21 +848,31 @@ async function seed() {
     logger.info('');
     logger.info('🎉 Database seeding completed successfully!');
     logger.info('');
-    logger.info('📝 Sample Credentials (password: Test1234):');
-    logger.info('  Admin:    admin@edusphere.com');
-    logger.info('  Tutor 1:  john.tutor@edusphere.com');
-    logger.info('  Tutor 2:  sarah.tutor@edusphere.com');
-    logger.info('  Tutor 3:  priya.tutor@edusphere.com');
-    logger.info('  Student:  mike.student@edusphere.com   (3 courses, active)');
-    logger.info('  Student:  emma.student@edusphere.com   (3 courses, active)');
-    logger.info('  Student:  alex.student@edusphere.com   (4 courses, 1 completed)');
+    logger.info('📝 Sample Credentials (all passwords: Test1234)');
+    logger.info('');
+    logger.info('  ADMIN');
+    logger.info('  admin@edusphere.com              — roles: admin, tutor | Elite plan');
+    logger.info('');
+    logger.info('  TUTORS');
+    logger.info('  john.tutor@edusphere.com         — roles: tutor | Pro plan');
+    logger.info('  sarah.tutor@edusphere.com        — roles: tutor | Pro plan');
+    logger.info('  priya.tutor@edusphere.com        — roles: tutor | Starter plan');
+    logger.info('');
+    logger.info('  STUDENTS');
+    logger.info('  mike.student@edusphere.com       — 3 courses, all active');
+    logger.info('  emma.student@edusphere.com       — 3 courses, active');
+    logger.info('  alex.student@edusphere.com       — 4 courses, 1 completed');
+    logger.info('');
+    logger.info('  SELLER (marketplace only)');
+    logger.info('  vendor@edusphere.com             — roles: seller | Pro plan, active');
     logger.info('');
     logger.info('📊 Summary:');
-    logger.info(`  Users:       ${users.length}`);
-    logger.info(`  Courses:     ${courses.length}`);
-    logger.info(`  Lessons:     ${lessons.length}`);
-    logger.info(`  Enrollments: ${10}`);
-    logger.info(`  Marketplace: ${marketplaceListings.length}`);
+    logger.info(`  Users:         ${users.length}`);
+    logger.info(`  Courses:       ${courses.length}`);
+    logger.info(`  Lessons:       ${lessons.length}`);
+    logger.info(`  Enrollments:   10`);
+    logger.info(`  Marketplace:   ${marketplaceListings.length}`);
+    logger.info(`  Subscriptions: 5 (admin + 3 tutors + 1 vendor, all active)`);
     logger.info('');
 
     process.exit(0);

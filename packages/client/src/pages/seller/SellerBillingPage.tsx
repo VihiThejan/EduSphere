@@ -1,7 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Navigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppFooter, AppHeader, AppNavItem } from '@/components/common';
 import { USER_ROLES, VENDOR_PLAN_QUOTAS, VENDOR_PLAN_TIERS, VendorPlanTier } from '@edusphere/shared';
 import { useAuthStore } from '@/store/authStore';
@@ -16,6 +16,8 @@ const planDescriptions: Record<VendorPlanTier, string> = {
 const SellerBillingPage: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [search, setSearch] = React.useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   const headerItems: AppNavItem[] = [
     { label: 'Courses', href: '/courses' },
@@ -37,6 +39,32 @@ const SellerBillingPage: React.FC = () => {
   });
 
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+  const [verifyStatus, setVerifyStatus] = React.useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
+
+  // After Stripe redirects back with ?checkout=success, retrieve the session and activate
+  React.useEffect(() => {
+    const checkoutResult = searchParams.get('checkout');
+    const sessionId = localStorage.getItem('vendorCheckoutSessionId');
+
+    if (checkoutResult === 'success' && sessionId) {
+      setVerifyStatus('verifying');
+      vendorBillingApi
+        .verifyCheckout(sessionId)
+        .then(() => {
+          localStorage.removeItem('vendorCheckoutSessionId');
+          void queryClient.invalidateQueries({ queryKey: ['vendor-billing-status'] });
+          setVerifyStatus('success');
+          setSearchParams({}, { replace: true });
+        })
+        .catch(() => {
+          setVerifyStatus('error');
+          setCheckoutError('Could not verify payment. Please contact support if your payment was charged.');
+        });
+    } else if (checkoutResult === 'cancelled') {
+      setSearchParams({}, { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkoutMutation = useMutation({
     mutationFn: (tier: VendorPlanTier) =>
@@ -46,6 +74,7 @@ const SellerBillingPage: React.FC = () => {
         cancelUrl: `${window.location.origin}/seller/billing?checkout=cancelled`,
       }),
     onSuccess: (data) => {
+      localStorage.setItem('vendorCheckoutSessionId', data.checkoutSessionId);
       window.location.href = data.checkoutUrl;
     },
     onError: (err: unknown) => {
@@ -128,6 +157,18 @@ const SellerBillingPage: React.FC = () => {
             </article>
           ))}
         </section>
+
+        {verifyStatus === 'verifying' && (
+          <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Verifying your payment, please wait…
+          </div>
+        )}
+
+        {verifyStatus === 'success' && (
+          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            Payment confirmed. Your subscription is now active — you can publish listings.
+          </div>
+        )}
 
         {checkoutError && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

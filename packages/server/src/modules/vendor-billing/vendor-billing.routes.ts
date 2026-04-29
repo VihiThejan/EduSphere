@@ -23,6 +23,10 @@ vendorBillingRoutes.get('/me/status', (req, res, next) =>
   vendorBillingController.getMySubscriptionStatus(req, res, next)
 );
 
+vendorBillingRoutes.post('/verify-checkout', (req, res, next) =>
+  vendorBillingController.verifyCheckout(req, res, next)
+);
+
 vendorBillingRoutes.get('/seller/:sellerId/status', authorize([USER_ROLES.ADMIN]), (req, res, next) =>
   vendorBillingController.getSellerSubscriptionStatusByAdmin(req, res, next)
 );

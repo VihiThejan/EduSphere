@@ -33,7 +33,7 @@ export function useSidebarItems() {
     { label: 'Courses', href: '/courses', icon: BookOpen, active: active('/courses') },
     { label: 'My Learning', href: '/my-learning', icon: Clock3, active: active('/my-learning') },
     { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag, active: active('/marketplace') },
-    { label: 'Listings', href: '/seller/listings', icon: ListChecks, active: active('/seller') },
+    { label: 'Listings', href: '/seller/listings', icon: ListChecks, active: active('/seller/listings') },
     { label: 'Live Sessions', href: '/live', icon: Radio, active: active('/live') },
     ...(isTutor
       ? [

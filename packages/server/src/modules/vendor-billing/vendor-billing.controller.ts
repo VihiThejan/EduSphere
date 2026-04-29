@@ -75,6 +75,31 @@ export class VendorBillingController {
     }
   }
 
+  async verifyCheckout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const sellerId = req.user?.userId;
+      if (!sellerId) {
+        throw new ValidationError('User authentication context missing');
+      }
+
+      const { sessionId } = req.body as { sessionId: string };
+      if (!sessionId) {
+        throw new ValidationError('sessionId is required');
+      }
+
+      await vendorBillingService.verifyCheckoutSession(sessionId, sellerId);
+
+      const data = await vendorBillingService.getSellerSubscriptionStatus(sellerId);
+      res.status(200).json({
+        success: true,
+        message: 'Subscription verified and activated',
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async refundVendorPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const roles = req.user?.roles || [];
