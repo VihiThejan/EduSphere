@@ -10,6 +10,9 @@ import {
   Radio,
   Upload,
   Video,
+  Flame,
+  GraduationCap,
+  BadgeCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +30,8 @@ import {
   LearningCourse,
 } from '@/components/dashboard/types';
 import { dashboardApi } from '@/services/api/dashboard.api';
+import { analyticsApi } from '@/services/api/analytics.api';
+import { useMutation } from '@tanstack/react-query';
 
 const DashboardPage: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuthStore();
@@ -40,6 +45,14 @@ const DashboardPage: React.FC = () => {
     queryFn: dashboardApi.getStudentDashboardData,
     enabled: isAuthenticated && !!user,
   });
+
+  const { data: streakData } = useQuery({
+    queryKey: ['streak', user?._id],
+    queryFn: analyticsApi.getStreak,
+    enabled: isAuthenticated && !!user,
+  });
+
+  const streak = streakData?.streak ?? 0;
 
   const activeEnrollments = data?.enrollments ?? [];
   const recommendedCourses = data?.recommendedCourses ?? [];
@@ -69,6 +82,12 @@ const DashboardPage: React.FC = () => {
   ];
 
   const { primaryItems, secondaryItems, isTutor } = useSidebarItems();
+
+  // Tutor request mutation (for students only)
+  const requestTutorMutation = useMutation({
+    mutationFn: analyticsApi.requestTutorRole,
+  });
+  const tutorRequestStatus = requestTutorMutation.data?.tutorRequestStatus ?? 'none';
 
   const stats: DashboardStat[] = [
     {
@@ -140,7 +159,7 @@ const DashboardPage: React.FC = () => {
       />
 
       <div className="flex flex-1">
-        <AppSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={14} />
+        <AppSidebar primaryItems={primaryItems} secondaryItems={secondaryItems} streakDays={streak} />
 
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -222,6 +241,40 @@ const DashboardPage: React.FC = () => {
           {/* My Learning Section */}
           <MyLearningSection />
 
+          {/* Become a Tutor CTA — visible only to non-tutors */}
+          {!isTutor && (
+            <div className="mt-8 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
+                    <GraduationCap size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Become a Tutor</h3>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      Share your knowledge with fellow students — upload courses, host live sessions, and earn.
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  {tutorRequestStatus === 'pending' || requestTutorMutation.isSuccess ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
+                      <BadgeCheck size={16} /> Request Pending
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => requestTutorMutation.mutate()}
+                      disabled={requestTutorMutation.isPending}
+                      className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {requestTutorMutation.isPending ? 'Submitting…' : 'Apply to Teach'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tutor Portal Banner — visible only to tutors */}
           {isTutor && (
             <div className="mt-8 rounded-xl border border-primary-900/20 bg-primary-900/5 p-6">
@@ -258,10 +311,11 @@ const DashboardPage: React.FC = () => {
 
           <div className="mt-8 rounded-xl border border-primary-900/10 bg-white p-4 lg:hidden">
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary-900">
-              <Activity size={16} />
+              <Flame size={16} />
               Study Streak
             </div>
-            <p className="text-lg font-bold text-slate-900">14 Days</p>
+            <p className="text-lg font-bold text-slate-900">{streak} Day{streak === 1 ? '' : 's'}</p>
+            <p className="text-xs text-slate-400">{streak > 0 ? 'Keep it up! 🔥' : 'Start studying to build your streak.'}</p>
           </div>
         </main>
       </div>
