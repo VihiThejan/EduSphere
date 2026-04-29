@@ -1,4 +1,13 @@
-import { MarketplaceCategory, ItemCondition, CampusLocation, MarketplaceItemStatus } from '../constants/marketplace';
+import {
+  MarketplaceCategory,
+  ItemCondition,
+  CampusLocation,
+  MarketplaceItemStatus,
+  MarketplaceListingPublishStatus,
+  VendorPlanTier,
+  VendorPlanInterval,
+  VendorSubscriptionStatus,
+} from '../constants/marketplace';
 
 export interface IMarketplaceImage {
   url: string;
@@ -33,11 +42,33 @@ export interface IMarketplaceItem {
   images: IMarketplaceImage[];
   tags: string[];
   status: MarketplaceItemStatus;
+  publishStatus: MarketplaceListingPublishStatus;
+  publishGateReason?: string;
   isNegotiable: boolean;
   seller: IMarketplaceSellerInfo;
   stats: IMarketplaceStats;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IVendorPlan {
+  tier: VendorPlanTier;
+  interval: VendorPlanInterval;
+  amountLkr: number;
+  listingQuota: number;
+  stripePriceId?: string;
+}
+
+export interface IVendorSubscription {
+  sellerId: string;
+  tier: VendorPlanTier;
+  interval: VendorPlanInterval;
+  status: VendorSubscriptionStatus;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  startedAt?: Date;
+  currentPeriodEnd?: Date;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export interface IMarketplaceItemInput {

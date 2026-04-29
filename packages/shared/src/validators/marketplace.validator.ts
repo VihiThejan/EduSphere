@@ -3,7 +3,9 @@ import {
   MARKETPLACE_CATEGORIES,
   ITEM_CONDITION,
   MARKETPLACE_ITEM_STATUS,
+  MARKETPLACE_LISTING_PUBLISH_STATUS,
   CAMPUS_LOCATIONS,
+  VENDOR_PLAN_TIERS,
 } from '../constants/marketplace';
 
 export const marketplaceImageSchema = z.object({
@@ -59,6 +61,20 @@ export const marketplaceItemUpdateSchema = z.object({
   tags: z.array(z.string().max(50)).max(10).optional(),
   isNegotiable: z.boolean().optional(),
   status: z.enum(Object.values(MARKETPLACE_ITEM_STATUS) as any).optional(),
+  publishStatus: z.enum(Object.values(MARKETPLACE_LISTING_PUBLISH_STATUS) as any).optional(),
+});
+
+export const vendorSubscriptionCheckoutSchema = z.object({
+  tier: z.enum(Object.values(VENDOR_PLAN_TIERS) as [string, ...string[]], {
+    errorMap: () => ({ message: 'Invalid vendor plan tier' }),
+  }),
+  returnUrl: z.string().url('Invalid returnUrl').optional(),
+  cancelUrl: z.string().url('Invalid cancelUrl').optional(),
+});
+
+export const vendorRefundSchema = z.object({
+  paymentIntentId: z.string().min(1, 'paymentIntentId is required'),
+  reason: z.string().min(3, 'Refund reason is required').max(200),
 });
 
 export const marketplaceFilterSchema = z.object({
@@ -77,3 +93,5 @@ export const marketplaceFilterSchema = z.object({
 export type MarketplaceItemCreateInput = z.infer<typeof marketplaceItemCreateSchema>;
 export type MarketplaceItemUpdateInput = z.infer<typeof marketplaceItemUpdateSchema>;
 export type MarketplaceFilterInput = z.infer<typeof marketplaceFilterSchema>;
+export type VendorSubscriptionCheckoutInput = z.infer<typeof vendorSubscriptionCheckoutSchema>;
+export type VendorRefundInput = z.infer<typeof vendorRefundSchema>;

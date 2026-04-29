@@ -10,7 +10,9 @@ import {
   MarketplaceItemUpdateInput,
   MarketplaceFilterInput,
   MARKETPLACE_ITEM_STATUS,
+  MARKETPLACE_LISTING_PUBLISH_STATUS,
 } from '@edusphere/shared';
+import { vendorBillingService } from '../vendor-billing/vendor-billing.service.js';
 
 interface PaginationResult<T> {
   data: T[];
@@ -45,13 +47,21 @@ export class MarketplaceService {
     // Sort images by order
     const sortedImages = [...input.images].sort((a, b) => a.order - b.order);
 
-    // Create the listing
+    const publishEligibility = await vendorBillingService.canPublishAnotherListing(sellerId);
+
+    // Create listing. If billing requirements are not met, keep as gated draft.
     const listing = await MarketplaceItem.create({
       ...input,
       images: sortedImages,
       sellerId,
       seller: sellerInfo,
-      status: MARKETPLACE_ITEM_STATUS.ACTIVE,
+      status: publishEligibility.allowed
+        ? MARKETPLACE_ITEM_STATUS.ACTIVE
+        : MARKETPLACE_ITEM_STATUS.INACTIVE,
+      publishStatus: publishEligibility.allowed
+        ? MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED
+        : MARKETPLACE_LISTING_PUBLISH_STATUS.PENDING_PAYMENT,
+      publishGateReason: publishEligibility.allowed ? undefined : publishEligibility.reason,
     });
 
     return listing;
@@ -85,7 +95,10 @@ export class MarketplaceService {
       limit = 6,
     } = filters;
 
-    const query: Record<string, any> = {};
+    const query: Record<string, unknown> = {};
+
+    // Public listing feed only returns published listings.
+    query.publishStatus = MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED;
 
     // Always filter by status unless explicitly provided
     if (status) {
@@ -151,7 +164,7 @@ export class MarketplaceService {
     }
 
     // Update allowed fields only
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
 
     if (input.title !== undefined) updateData.title = input.title;
     if (input.description !== undefined) updateData.description = input.description;
@@ -237,6 +250,7 @@ export class MarketplaceService {
     const query = {
       sellerId,
       status: MARKETPLACE_ITEM_STATUS.ACTIVE,
+      publishStatus: MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED,
     };
 
     const skip = (page - 1) * limit;
@@ -258,6 +272,34 @@ export class MarketplaceService {
         pages,
       },
     };
+  }
+
+  async publishListing(listingId: string, sellerId: string): Promise<IMarketplaceItemDocument> {
+    const listing = await MarketplaceItem.findById(listingId);
+
+    if (!listing) {
+      throw new NotFoundError('Listing');
+    }
+
+    if (listing.sellerId.toString() !== sellerId) {
+      throw new AuthorizationError('You can only publish your own listings');
+    }
+
+    const publishEligibility = await vendorBillingService.canPublishAnotherListing(sellerId);
+    if (!publishEligibility.allowed) {
+      listing.publishStatus = MARKETPLACE_LISTING_PUBLISH_STATUS.PENDING_PAYMENT;
+      listing.publishGateReason = publishEligibility.reason;
+      listing.status = MARKETPLACE_ITEM_STATUS.INACTIVE;
+      await listing.save();
+      throw new AuthorizationError(publishEligibility.reason || 'Subscription required to publish listing');
+    }
+
+    listing.status = MARKETPLACE_ITEM_STATUS.ACTIVE;
+    listing.publishStatus = MARKETPLACE_LISTING_PUBLISH_STATUS.PUBLISHED;
+    listing.publishGateReason = undefined;
+    await listing.save();
+
+    return listing;
   }
 }
 
