@@ -19,6 +19,20 @@ router.get('/me', authenticate, userController.getMe.bind(userController));
  */
 router.put('/me', authenticate, userController.updateMe.bind(userController));
 
+/**
+ * @route   GET /api/v1/users/me/profile
+ * @desc    Get current user's full profile (with stats & courses)
+ * @access  Private
+ */
+router.get('/me/profile', authenticate, userController.getMyProfile.bind(userController));
+
+/**
+ * @route   PUT /api/v1/users/me/profile
+ * @desc    Update current user's profile fields
+ * @access  Private
+ */
+router.put('/me/profile', authenticate, userController.updateMe.bind(userController));
+
 // ── Tutor Approval Workflow ────────────────────────────────────────────────
 
 /**
@@ -43,6 +57,13 @@ router.get(
   authorize([USER_ROLES.ADMIN]),
   userController.getTutorRequests.bind(userController)
 );
+
+/**
+ * @route   GET /api/v1/users/:userId/profile
+ * @desc    Get any user's public profile (with stats & courses)
+ * @access  Public
+ */
+router.get('/:userId/profile', userController.getUserProfile.bind(userController));
 
 /**
  * @route   PATCH /api/v1/users/:userId/tutor-request

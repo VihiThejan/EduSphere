@@ -133,7 +133,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   My Courses
                 </Link>
                 <Link
-                  to="/dashboard"
+                  to="/profile"
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                 >

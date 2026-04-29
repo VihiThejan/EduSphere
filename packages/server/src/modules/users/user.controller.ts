@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserModel } from './user.model.js';
+import { userService } from './user.service.js';
 import { NotFoundError, ValidationError } from '../../shared/utils/errors.js';
 import { ApiResponse, USER_ROLES } from '@edusphere/shared';
 
@@ -10,6 +11,27 @@ export class UserController {
       if (!user) throw new NotFoundError('User');
 
       const response: ApiResponse = { success: true, data: { user } };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMyProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const profile = await userService.getUserProfile(req.user!.userId);
+      const response: ApiResponse = { success: true, data: profile };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUserProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const profile = await userService.getUserProfile(userId);
+      const response: ApiResponse = { success: true, data: profile };
       res.status(200).json(response);
     } catch (error) {
       next(error);

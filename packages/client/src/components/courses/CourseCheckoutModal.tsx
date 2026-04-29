@@ -1,8 +1,78 @@
 import React, { useEffect, useState } from 'react';
 import { X, Loader2, CheckCircle2, Lock } from 'lucide-react';
-import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { analyticsApi, CourseCheckoutResult } from '@/services/api/analytics.api';
 import { useAuthStore } from '@/store/authStore';
+import { config } from '@/config';
+
+const stripePromise = loadStripe(config.stripePublishableKey);
+
+interface StripePaymentFormProps {
+  priceAmount: number;
+  priceCurrency: string;
+  courseId: string;
+  onConfirming: () => void;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
+}
+
+const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
+  priceAmount,
+  priceCurrency,
+  courseId,
+  onConfirming,
+  onSuccess,
+  onError,
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handlePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    onConfirming();
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout/success?courseId=${courseId}`,
+      },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      onError(error.message ?? 'Payment failed');
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <form onSubmit={handlePay}>
+      <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-slate-600">Course fee</span>
+          <span className="text-base font-bold text-slate-900">
+            {priceAmount.toLocaleString()} {priceCurrency}
+          </span>
+        </div>
+      </div>
+
+      <PaymentElement options={{ layout: 'tabs' }} />
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800 disabled:opacity-50"
+      >
+        <Lock size={14} />
+        Pay {priceAmount.toLocaleString()} {priceCurrency}
+      </button>
+    </form>
+  );
+};
 
 interface CourseCheckoutModalProps {
   courseId: string;
@@ -21,8 +91,6 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
   onClose,
   onEnrolled,
 }) => {
-  const stripe = useStripe();
-  const elements = useElements();
   useAuthStore(); // keep store connected for future auth checks
 
   const [step, setStep] = useState<'loading' | 'payment' | 'confirming' | 'success' | 'error'>(
@@ -65,29 +133,6 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements || !checkoutData) return;
-
-    setStep('confirming');
-
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/checkout/success?courseId=${courseId}`,
-      },
-      redirect: 'if_required',
-    });
-
-    if (error) {
-      setErrorMsg(error.message ?? 'Payment failed');
-      setStep('error');
-    } else {
-      setStep('success');
-      setTimeout(() => onEnrolled(), 1500);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
@@ -116,31 +161,25 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
 
           {/* Payment form */}
           {step === 'payment' && checkoutData && (
-            <form onSubmit={handlePay}>
-              <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">Course fee</span>
-                  <span className="text-base font-bold text-slate-900">
-                    {priceAmount.toLocaleString()} {priceCurrency}
-                  </span>
-                </div>
-              </div>
-
-              <PaymentElement
-                options={{
-                  layout: 'tabs',
+            <Elements
+              stripe={stripePromise}
+              options={{ clientSecret: checkoutData.clientSecret }}
+            >
+              <StripePaymentForm
+                priceAmount={priceAmount}
+                priceCurrency={priceCurrency}
+                courseId={courseId}
+                onConfirming={() => setStep('confirming')}
+                onSuccess={() => {
+                  setStep('success');
+                  setTimeout(() => onEnrolled(), 1500);
+                }}
+                onError={(msg) => {
+                  setErrorMsg(msg);
+                  setStep('error');
                 }}
               />
-
-              <button
-                type="submit"
-                disabled={!stripe || !elements}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800 disabled:opacity-50"
-              >
-                <Lock size={14} />
-                Pay {priceAmount.toLocaleString()} {priceCurrency}
-              </button>
-            </form>
+            </Elements>
           )}
 
           {/* Confirming */}

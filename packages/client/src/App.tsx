@@ -42,6 +42,7 @@ import MyLearningPage from './pages/MyLearningPage';
 import TutorAnalyticsPage from './pages/tutor/TutorAnalyticsPage';
 import TutorDashboardPage from './pages/tutor/TutorDashboardPage';
 import AdminTutorRequestsPage from './pages/admin/AdminTutorRequestsPage';
+import ProfilePage from './pages/ProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -349,6 +350,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* User Profile - public: /profile/:userId, own: /profile */}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:userId" element={<ProfilePage />} />
 
           {/* 404 */}
           <Route path="*" element={<Navigate to="/" replace />} />
