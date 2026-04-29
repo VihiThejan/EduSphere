@@ -113,3 +113,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - On ?checkout=success the page calls POST /vendor-billing/verify-checkout
 - Verifying, success, and error banners shown based on verification result
 - Status query invalidated after success so the UI reflects the active plan immediately
+- clearDatabase() in seed script now also deletes VendorSubscription, VendorPlan, and SellerProfile collections
+- Deletion order respects document dependencies to avoid orphaned records
+- Seed console output updated with subscription and seller profile summary counts
