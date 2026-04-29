@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { Order } from '../orders/order.model.js';
 import { orderService } from '../orders/order.service.js';
+import { enrollmentCheckoutService } from '../enrollments/enrollment-checkout.service.js';
 import { config } from '../../config/index.js';
 import {
   AuthorizationError,
@@ -174,7 +175,12 @@ export class PaymentService {
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        await this.onPaymentSucceeded(paymentIntent.id);
+        // Course-enrollment payments are handled separately
+        if (paymentIntent.metadata?.type === 'course_enrollment') {
+          await enrollmentCheckoutService.handleCoursePaymentSuccess(paymentIntent.id);
+        } else {
+          await this.onPaymentSucceeded(paymentIntent.id);
+        }
         break;
       }
       case 'payment_intent.payment_failed': {

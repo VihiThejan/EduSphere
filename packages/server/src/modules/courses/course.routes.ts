@@ -121,4 +121,15 @@ router.post(
   courseController.addLesson.bind(courseController)
 );
 
+/**
+ * @route   GET /api/v1/courses/:courseId/certificate
+ * @desc    Get certificate payload for a completed course (student must have 100% progress)
+ * @access  Private
+ */
+router.get(
+  '/:courseId/certificate',
+  authenticate,
+  certificateController.getCertificate.bind(certificateController)
+);
+
 export default router;

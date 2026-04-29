@@ -31,6 +31,12 @@ import SellerDashboardPage from './pages/seller/SellerDashboardPage';
 import SellerEditListingPage from './pages/seller/SellerEditListingPage';
 import SellerProfilePage from './pages/seller/SellerProfilePage';
 import SellerRouteGate from './components/seller/SellerRouteGate';
+import AdminRouteGate from './components/admin/AdminRouteGate';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminSellersPage from './pages/admin/AdminSellersPage';
+import AdminListingsPage from './pages/admin/AdminListingsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import LiveSessionPage from './pages/live/LiveSessionPage';
 import MyLearningPage from './pages/MyLearningPage';
 
@@ -70,11 +76,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-// Public Route Component (redirect to dashboard if authenticated)
+// Public Route Component (redirect to role-specific dashboard if authenticated)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated, isInitialized, user } = useAuthStore();
   if (!isInitialized) return <AppLoader />;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) {
+    const dest = user?.roles?.includes('admin') ? '/admin/dashboard' : '/dashboard';
+    return <Navigate to={dest} replace />;
+  }
   return <>{children}</>;
 };
 
@@ -254,6 +263,58 @@ function App() {
             element={
               <ProtectedRoute>
                 <LiveSessionPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminRouteGate>
+                  <AdminDashboardPage />
+                </AdminRouteGate>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute>
+                <AdminRouteGate>
+                  <AdminUsersPage />
+                </AdminRouteGate>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sellers"
+            element={
+              <ProtectedRoute>
+                <AdminRouteGate>
+                  <AdminSellersPage />
+                </AdminRouteGate>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/listings"
+            element={
+              <ProtectedRoute>
+                <AdminRouteGate>
+                  <AdminListingsPage />
+                </AdminRouteGate>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute>
+                <AdminRouteGate>
+                  <AdminOrdersPage />
+                </AdminRouteGate>
               </ProtectedRoute>
             }
           />

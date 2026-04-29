@@ -22,15 +22,21 @@ const LoginPage: React.FC = () => {
     resolver: zodResolver(userLoginSchema),
   });
 
+  const getRedirectPath = (roles: string[]) => {
+    if (roles.includes('admin')) return '/admin/dashboard';
+    return '/dashboard';
+  };
+
   const onSubmit = async (data: UserLoginInput) => {
     try {
       setIsLoading(true);
       setError('');
       const response = await authApi.login(data);
       login(response.accessToken, response.user);
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Login failed. Please try again.');
+      navigate(getRedirectPath(response.user.roles));
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: { message?: string } } } };
+      setError(e?.response?.data?.error?.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

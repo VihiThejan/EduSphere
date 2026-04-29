@@ -9,6 +9,10 @@ import {
   Settings,
   ShoppingBag,
   Upload,
+  Users,
+  Store,
+  Package,
+  ShoppingCart,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import type { AppNavItem } from '@/components/common/types';
@@ -39,4 +43,25 @@ export function useSidebarItems() {
   ];
 
   return { primaryItems, secondaryItems, isTutor: !!isTutor };
+}
+
+export function useAdminSidebarItems() {
+  const { pathname } = useLocation();
+
+  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const primaryItems: AppNavItem[] = [
+    { label: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard, active: active('/admin/dashboard') },
+    { label: 'Users', href: '/admin/users', icon: Users, active: active('/admin/users') },
+    { label: 'Sellers', href: '/admin/sellers', icon: Store, active: active('/admin/sellers') },
+    { label: 'Listings', href: '/admin/listings', icon: Package, active: active('/admin/listings') },
+    { label: 'Orders', href: '/admin/orders', icon: ShoppingCart, active: active('/admin/orders') },
+  ];
+
+  const secondaryItems: AppNavItem[] = [
+    { label: 'Analytics', href: '#analytics', icon: BarChart3 },
+    { label: 'Settings', href: '#settings', icon: Settings },
+  ];
+
+  return { primaryItems, secondaryItems };
 }

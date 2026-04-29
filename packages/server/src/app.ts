@@ -23,6 +23,7 @@ import vendorBillingRoutes from './modules/vendor-billing/vendor-billing.routes.
 import sellerProfileRoutes from './modules/seller-profile/seller-profile.routes.js';
 import liveSessionRoutes from './modules/live-sessions/live-session.routes.js';
 import reviewRoutes from './modules/reviews/review.routes.js';
+import adminRoutes from './modules/admin/admin.routes.js';
 import { paymentController } from './modules/payments/payment.controller.js';
 
 const app: Application = express();
@@ -89,6 +90,7 @@ app.use(`${apiPrefix}/vendor-billing`, vendorBillingRoutes);
 app.use(`${apiPrefix}/seller-profile`, sellerProfileRoutes);
 app.use(`${apiPrefix}/live-sessions`, liveSessionRoutes);
 app.use(`${apiPrefix}/reviews`, reviewRoutes);
+app.use(`${apiPrefix}/admin`, adminRoutes);
 
 // Error handling
 app.use(notFoundHandler);
