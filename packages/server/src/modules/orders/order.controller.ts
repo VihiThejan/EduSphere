@@ -111,7 +111,7 @@ export class OrderController {
         fulfillmentStatus: fulfillmentStatus as any,
       });
 
-      res.json(result);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }
@@ -128,7 +128,7 @@ export class OrderController {
         fulfillmentStatus: fulfillmentStatus as any,
       });
 
-      res.json(result);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

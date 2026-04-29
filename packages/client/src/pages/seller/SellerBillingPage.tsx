@@ -36,6 +36,8 @@ const SellerBillingPage: React.FC = () => {
     enabled: isAuthenticated && canAccess,
   });
 
+  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+
   const checkoutMutation = useMutation({
     mutationFn: (tier: VendorPlanTier) =>
       vendorBillingApi.createCheckout({
@@ -45,6 +47,13 @@ const SellerBillingPage: React.FC = () => {
       }),
     onSuccess: (data) => {
       window.location.href = data.checkoutUrl;
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      setCheckoutError(
+        msg ?? 'Subscription checkout is unavailable. Stripe price IDs may not be configured.'
+      );
     },
   });
 
@@ -119,6 +128,12 @@ const SellerBillingPage: React.FC = () => {
             </article>
           ))}
         </section>
+
+        {checkoutError && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {checkoutError}
+          </div>
+        )}
 
         <div className="mt-6 flex justify-end">
           <div className="flex gap-2">

@@ -23,7 +23,7 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const { isAuthenticated } = useAuthStore();
+  useAuthStore(); // keep store connected for future auth checks
 
   const [step, setStep] = useState<'loading' | 'payment' | 'confirming' | 'success' | 'error'>(
     'loading'

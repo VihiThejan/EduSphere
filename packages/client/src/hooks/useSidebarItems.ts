@@ -13,6 +13,8 @@ import {
   Store,
   Package,
   ShoppingCart,
+  GraduationCap,
+  Shield,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import type { AppNavItem } from '@/components/common/types';
@@ -22,6 +24,7 @@ export function useSidebarItems() {
   const { user } = useAuthStore();
 
   const isTutor = user?.roles?.includes('tutor') || user?.roles?.includes('admin');
+  const isAdmin = user?.roles?.includes('admin');
 
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -33,16 +36,22 @@ export function useSidebarItems() {
     { label: 'Listings', href: '/seller/listings', icon: ListChecks, active: active('/seller') },
     { label: 'Live Sessions', href: '/live', icon: Radio, active: active('/live') },
     ...(isTutor
-      ? [{ label: 'Upload Course', href: '/tutor/upload', icon: Upload, active: active('/tutor/upload') }]
+      ? [
+          { label: 'Tutor Hub', href: '/tutor/dashboard', icon: GraduationCap, active: active('/tutor/dashboard') },
+          { label: 'Upload Course', href: '/tutor/upload', icon: Upload, active: active('/tutor/upload') },
+        ]
+      : []),
+    ...(isAdmin
+      ? [{ label: 'Tutor Requests', href: '/admin/tutor-requests', icon: Shield, active: active('/admin/tutor-requests') }]
       : []),
   ];
 
   const secondaryItems: AppNavItem[] = [
-    { label: 'Analytics', href: '#analytics', icon: BarChart3 },
+    { label: 'Analytics', href: isTutor ? '/tutor/analytics' : '#analytics', icon: BarChart3 },
     { label: 'Settings', href: '#settings', icon: Settings },
   ];
 
-  return { primaryItems, secondaryItems, isTutor: !!isTutor };
+  return { primaryItems, secondaryItems, isTutor: !!isTutor, isAdmin: !!isAdmin };
 }
 
 export function useAdminSidebarItems() {

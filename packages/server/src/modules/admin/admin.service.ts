@@ -1,8 +1,8 @@
 import { UserModel } from '../users/user.model.js';
-import { SellerProfileModel } from '../seller-profile/seller-profile.model.js';
-import { MarketplaceItemModel } from '../marketplace/marketplace.model.js';
+import { SellerProfile as SellerProfileModel } from '../seller-profile/seller-profile.model.js';
+import { MarketplaceItem as MarketplaceItemModel } from '../marketplace/marketplace.model.js';
 import { CourseModel } from '../courses/course.model.js';
-import { OrderModel } from '../orders/order.model.js';
+import { Order as OrderModel } from '../orders/order.model.js';
 import { EnrollmentModel } from '../enrollments/enrollment.model.js';
 import { NotFoundError, ValidationError } from '../../shared/utils/errors.js';
 import { USER_ROLES, UserRole } from '@edusphere/shared';
@@ -129,10 +129,10 @@ export class AdminService {
 
     const filtered = search
       ? sellers.filter((s) => {
-          const user = s.userId as any;
+          const u = s.userId as { email?: string } | null;
           return (
             s.shopName.toLowerCase().includes(search.toLowerCase()) ||
-            user?.email?.toLowerCase().includes(search.toLowerCase())
+            (u?.email?.toLowerCase().includes(search.toLowerCase()) ?? false)
           );
         })
       : sellers;

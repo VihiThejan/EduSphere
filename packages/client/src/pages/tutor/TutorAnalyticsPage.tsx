@@ -4,7 +4,6 @@ import {
   BookOpen,
   TrendingUp,
   Users,
-  Award,
   DollarSign,
   ChevronRight,
   ArrowLeft,

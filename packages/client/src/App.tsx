@@ -39,6 +39,9 @@ import AdminListingsPage from './pages/admin/AdminListingsPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import LiveSessionPage from './pages/live/LiveSessionPage';
 import MyLearningPage from './pages/MyLearningPage';
+import TutorAnalyticsPage from './pages/tutor/TutorAnalyticsPage';
+import TutorDashboardPage from './pages/tutor/TutorDashboardPage';
+import AdminTutorRequestsPage from './pages/admin/AdminTutorRequestsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -243,6 +246,34 @@ function App() {
             element={
               <ProtectedRoute>
                 <TutorUploadPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tutor/dashboard"
+            element={
+              <ProtectedRoute>
+                <TutorDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tutor/analytics"
+            element={
+              <ProtectedRoute>
+                <TutorAnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin routes */}
+          <Route
+            path="/admin/tutor-requests"
+            element={
+              <ProtectedRoute>
+                <AdminTutorRequestsPage />
               </ProtectedRoute>
             }
           />

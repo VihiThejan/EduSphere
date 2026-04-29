@@ -3,7 +3,7 @@ import { adminService } from './admin.service.js';
 import { ApiResponse } from '@edusphere/shared';
 
 export class AdminController {
-  async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getStats(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await adminService.getPlatformStats();
       res.json({ success: true, data: stats } satisfies ApiResponse);
