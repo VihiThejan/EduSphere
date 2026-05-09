@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, ArrowRight, ReceiptText } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppFooter, AppHeader, AppNavItem } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
@@ -18,9 +18,15 @@ const CheckoutSuccessPage: React.FC = () => {
   const location = useLocation();
   const [search, setSearch] = React.useState('');
 
-  const state = (location.state as SuccessState) || {};
-  const amount = state.amount ?? 12750;
-  const itemCount = state.itemCount ?? 2;
+  const state = location.state as SuccessState | null;
+
+  // Guard: page must be reached via checkout navigation, not a direct URL
+  if (!state?.orderId) {
+    return <Navigate to="/orders" replace />;
+  }
+
+  const amount = state.amount ?? 0;
+  const itemCount = state.itemCount ?? 0;
   const orderId = state.orderId;
 
   const { data: paymentStatusData } = useQuery({

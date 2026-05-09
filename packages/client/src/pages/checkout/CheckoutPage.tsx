@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { AppFooter, AppHeader, AppNavItem } from '@/components/common';
@@ -38,6 +38,7 @@ const CheckoutPage: React.FC = () => {
   const location = useLocation();
   const stripe = useStripe();
   const elements = useElements();
+  const queryClient = useQueryClient();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [search, setSearch] = React.useState('');
   const [paymentMethod, setPaymentMethod] = React.useState<CheckoutPaymentMethod>('card');
@@ -254,6 +255,7 @@ const CheckoutPage: React.FC = () => {
         }
       }
 
+      queryClient.invalidateQueries({ queryKey: ['checkout-cart'] });
       navigate('/checkout/success', {
         state: {
           amount: order.total,

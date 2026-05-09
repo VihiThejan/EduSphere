@@ -82,6 +82,16 @@ export class AdminService {
     if (invalid.length) {
       throw new ValidationError(`Invalid roles: ${invalid.join(', ')}`);
     }
+    // Prevent removing the last admin from the platform
+    if (!roles.includes(USER_ROLES.ADMIN)) {
+      const targetUser = await UserModel.findById(userId).select('roles');
+      if (targetUser?.roles.includes(USER_ROLES.ADMIN)) {
+        const adminCount = await UserModel.countDocuments({ roles: USER_ROLES.ADMIN });
+        if (adminCount <= 1) {
+          throw new ValidationError('Cannot remove the last admin from the platform');
+        }
+      }
+    }
     const user = await UserModel.findByIdAndUpdate(
       userId,
       { roles },

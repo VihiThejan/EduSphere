@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -n '1,50p' packages/server/src/modules/checkout/CheckoutPage.tsx)",
+      "Bash(sed -n '30,40p' packages/client/src/pages/checkout/CheckoutPage.tsx)"
+    ]
+  }
+}

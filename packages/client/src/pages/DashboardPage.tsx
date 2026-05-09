@@ -86,7 +86,8 @@ const DashboardPage: React.FC = () => {
   const requestTutorMutation = useMutation({
     mutationFn: analyticsApi.requestTutorRole,
   });
-  const tutorRequestStatus = requestTutorMutation.data?.tutorRequestStatus ?? 'none';
+  const tutorRequestStatus =
+    requestTutorMutation.data?.tutorRequestStatus ?? user?.tutorRequestStatus ?? 'none';
 
   const stats: DashboardStat[] = [
     {

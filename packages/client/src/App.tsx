@@ -274,7 +274,9 @@ function App() {
             path="/admin/tutor-requests"
             element={
               <ProtectedRoute>
-                <AdminTutorRequestsPage />
+                <AdminRouteGate>
+                  <AdminTutorRequestsPage />
+                </AdminRouteGate>
               </ProtectedRoute>
             }
           />

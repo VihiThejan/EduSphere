@@ -13,6 +13,7 @@ export interface User {
   roles: UserRole[];
   profile: UserProfile;
   isEmailVerified: boolean;
+  tutorRequestStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   createdAt: Date;
   updatedAt: Date;
 }
