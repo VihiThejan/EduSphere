@@ -129,6 +129,12 @@ export const analyticsApi = {
     return response;
   },
 
+  /** Verify a completed Stripe PaymentIntent and activate enrollment.
+   *  Call after stripe.confirmPayment succeeds — required when webhooks aren't forwarded. */
+  verifyEnrollmentPayment: async (courseId: string, paymentIntentId: string): Promise<void> => {
+    await apiClient.post(`/enrollments/courses/${courseId}/verify-payment`, { paymentIntentId });
+  },
+
   /** Admin: list tutor requests */
   getTutorRequests: async (status = 'pending'): Promise<TutorRequest[]> => {
     const response = await apiClient.get<{ requests: TutorRequest[] }>(

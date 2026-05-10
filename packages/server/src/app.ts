@@ -34,16 +34,17 @@ const apiPrefix = `/api/${config.apiVersion}`;
 app.use(helmet());
 app.use(cors(config.cors));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.maxRequests,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use('/api', limiter);
+// Rate limiting — skip entirely in development so local dev/testing isn't blocked
+if (!isDevelopment) {
+  const limiter = rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    max: config.rateLimit.maxRequests,
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api', limiter);
+}
 
 // Stripe webhook must receive raw body for signature verification.
 app.post(

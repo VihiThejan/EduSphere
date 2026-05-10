@@ -52,11 +52,11 @@ export class MarketplaceController {
     try {
       const { listingId } = req.params;
 
-      const listing = await marketplaceService.getListingById(listingId);
+      const { listing, sellerEmail } = await marketplaceService.getListingById(listingId);
 
       const response: ApiResponse = {
         success: true,
-        data: { listing },
+        data: { listing, sellerEmail },
       };
 
       res.status(200).json(response);

@@ -1,4 +1,4 @@
-import React, { startTransition, useDeferredValue } from 'react';
+import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -22,6 +22,7 @@ import {
 import { CatalogCourseCardData } from '@/components/course-catalog/types';
 import { coursesApi } from '@/services/api/courses.api';
 import { useAuthStore } from '@/store/authStore';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const PAGE_SIZE = 6;
 
@@ -80,7 +81,7 @@ const CoursesPage: React.FC = () => {
   const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null);
   const [enrolledCourseIds, setEnrolledCourseIds] = React.useState<string[]>([]);
 
-  const deferredSearch = useDeferredValue(search.trim());
+  const debouncedSearch = useDebounce(search.trim(), 400);
   const canRequestCourses = isFree || isPaid;
   const isStudent = !!user?.roles.includes(USER_ROLES.STUDENT);
 
@@ -105,10 +106,10 @@ const CoursesPage: React.FC = () => {
   ];
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['courses-catalog', deferredSearch, selectedCategory, selectedLevel, isFree, isPaid, page],
+    queryKey: ['courses-catalog', debouncedSearch, selectedCategory, selectedLevel, isFree, isPaid, page],
     queryFn: () =>
       coursesApi.getCourses({
-        search: deferredSearch || undefined,
+        search: debouncedSearch || undefined,
         category: selectedCategory,
         level: selectedLevel,
         page,
@@ -161,10 +162,8 @@ const CoursesPage: React.FC = () => {
         search={search}
         searchPlaceholder="Search courses..."
         onSearchChange={(value) => {
-          startTransition(() => {
-            setSearch(value);
-            resetPage();
-          });
+          setSearch(value);
+          resetPage();
         }}
         isAuthenticated={isAuthenticated}
         userName={user?.profile.firstName}

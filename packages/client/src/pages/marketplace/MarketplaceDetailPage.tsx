@@ -82,7 +82,7 @@ const mapListing = (item: ApiListing): MarketplaceListing => ({
   postedAt: new Date(item.createdAt).toISOString(),
 });
 
-const mapDetail = (item: ApiListing): MarketplaceListingDetail => {
+const mapDetail = (item: ApiListing, sellerEmail?: string): MarketplaceListingDetail => {
   const base = mapListing(item);
   return {
     ...base,
@@ -102,6 +102,7 @@ const mapDetail = (item: ApiListing): MarketplaceListingDetail => {
         'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80',
       rating: item.seller?.rating || 4.6,
       reviewCount: item.seller?.reviewCount || 0,
+      email: sellerEmail,
     },
     mapImageUrl:
       'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&q=80',
@@ -270,7 +271,8 @@ const MarketplaceDetailPage: React.FC = () => {
   });
 
   const listingRaw = listingResponse?.listing;
-  const listing = listingRaw ? mapDetail(listingRaw) : null;
+  const sellerEmail = listingResponse?.sellerEmail ?? undefined;
+  const listing = listingRaw ? mapDetail(listingRaw, sellerEmail) : null;
 
   const { data: sellerListingsResponse } = useQuery({
     queryKey: ['marketplace-seller-similar', listingRaw?.seller?.id, listingId],
@@ -329,7 +331,7 @@ const MarketplaceDetailPage: React.FC = () => {
           </div>
 
           <div className="mt-8 space-y-6 lg:col-span-4 lg:mt-0">
-            <MarketplaceSellerPanel listing={listing} />
+            <MarketplaceSellerPanel listing={listing} isAuthenticated={isAuthenticated} />
             <MarketplacePickupMap imageUrl={listing.mapImageUrl} />
           </div>
         </div>

@@ -38,6 +38,7 @@ export interface MarketplaceSellerProfile {
   avatarUrl: string;
   rating: number;
   reviewCount: number;
+  email?: string;
 }
 
 export interface MarketplaceListingDetail extends MarketplaceListing {

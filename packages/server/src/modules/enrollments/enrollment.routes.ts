@@ -139,6 +139,28 @@ router.post('/courses/:courseId/checkout', authenticate, async (req, res, next) 
 });
 
 /**
+ * @route   POST /api/v1/enrollments/courses/:courseId/verify-payment
+ * @desc    Verify a completed Stripe PaymentIntent and create enrollment.
+ *          Required for local dev where webhooks don't fire automatically.
+ * @access  Private
+ */
+router.post('/courses/:courseId/verify-payment', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const { paymentIntentId } = req.body as { paymentIntentId?: string };
+    if (!paymentIntentId) {
+      res.status(400).json({ success: false, error: { message: 'paymentIntentId is required' } });
+      return;
+    }
+    await enrollmentCheckoutService.handleCoursePaymentSuccess(paymentIntentId);
+    const response: ApiResponse = { success: true, data: { userId } };
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * @route   GET /api/v1/enrollments/streak
  * @desc    Get the current daily study streak for the authenticated user
  * @access  Private

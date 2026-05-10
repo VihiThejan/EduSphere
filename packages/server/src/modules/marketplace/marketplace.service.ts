@@ -69,18 +69,19 @@ export class MarketplaceService {
     return listing;
   }
 
-  async getListingById(listingId: string): Promise<IMarketplaceItemDocument> {
+  async getListingById(listingId: string): Promise<{ listing: IMarketplaceItemDocument; sellerEmail: string | null }> {
     const listing = await MarketplaceItem.findById(listingId);
 
     if (!listing) {
       throw new NotFoundError('Listing');
     }
 
-    // Increment views count
     listing.stats.views += 1;
     await listing.save();
 
-    return listing;
+    const seller = await UserModel.findById(listing.sellerId).select('email').lean();
+
+    return { listing, sellerEmail: seller?.email ?? null };
   }
 
   async getListings(filters: MarketplaceFilterInput): Promise<PaginationResult<IMarketplaceItemDocument>> {

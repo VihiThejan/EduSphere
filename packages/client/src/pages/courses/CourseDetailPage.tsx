@@ -22,17 +22,13 @@ import {
   Users,
   GraduationCap,
 } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { Course, Lesson, USER_ROLES } from '@edusphere/shared';
 import { AppFooter, AppHeader, AppNavItem, AppSidebar } from '@/components/common';
 import { coursesApi } from '@/services/api/courses.api';
 import { analyticsApi } from '@/services/api/analytics.api';
 import { useAuthStore } from '@/store/authStore';
-import { config } from '@/config';
 import CourseCheckoutModal from '@/components/courses/CourseCheckoutModal';
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ?? '');
+import { config } from '@/config';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -943,23 +939,21 @@ const CourseDetailPage: React.FC = () => {
 
       {/* Checkout modal for paid courses */}
       {showCheckoutModal && course && courseId && (
-        <Elements stripe={stripePromise}>
-          <CourseCheckoutModal
-            courseId={courseId}
-            courseTitle={course.title}
-            priceAmount={course.pricing.discountPrice ?? course.pricing.amount}
-            priceCurrency={course.pricing.currency}
-            onClose={() => setShowCheckoutModal(false)}
-            onEnrolled={() => {
-              setShowCheckoutModal(false);
-              setEnrolled(true);
-              setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
-              void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
-              void queryClient.invalidateQueries({ queryKey: ['enrollment-check', courseId] });
-              void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
-            }}
-          />
-        </Elements>
+        <CourseCheckoutModal
+          courseId={courseId}
+          courseTitle={course.title}
+          priceAmount={course.pricing.discountPrice ?? course.pricing.amount}
+          priceCurrency={course.pricing.currency}
+          onClose={() => setShowCheckoutModal(false)}
+          onEnrolled={() => {
+            setShowCheckoutModal(false);
+            setEnrolled(true);
+            setFeedbackMessage('Successfully enrolled! You can now access all course lessons.');
+            void queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+            void queryClient.invalidateQueries({ queryKey: ['enrollment-check', courseId] });
+            void queryClient.invalidateQueries({ queryKey: ['my-learning'] });
+          }}
+        />
       )}
     </div>
   );

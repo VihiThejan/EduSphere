@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(sed -n '1,50p' packages/server/src/modules/checkout/CheckoutPage.tsx)",
-      "Bash(sed -n '30,40p' packages/client/src/pages/checkout/CheckoutPage.tsx)"
+      "Bash(sed -n '30,40p' packages/client/src/pages/checkout/CheckoutPage.tsx)",
+      "Bash(cat packages/client/src/config/index.ts)",
+      "Bash(cat packages/client/src/config.ts)",
+      "Bash(grep -n \"STRIPE_SECRET\\\\|stripe\" packages/server/.env)",
+      "Bash(grep -n \"VITE_STRIPE\" packages/client/.env)"
     ]
   }
 }

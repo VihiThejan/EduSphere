@@ -12,7 +12,7 @@ interface StripePaymentFormProps {
   priceAmount: number;
   priceCurrency: string;
   courseId: string;
-  onConfirming: () => void;
+  paymentIntentId: string;
   onSuccess: () => void;
   onError: (msg: string) => void;
 }
@@ -21,19 +21,23 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   priceAmount,
   priceCurrency,
   courseId,
-  onConfirming,
+  paymentIntentId,
   onSuccess,
   onError,
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [paymentElementReady, setPaymentElementReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !paymentElementReady || isProcessing) return;
 
-    onConfirming();
+    setIsProcessing(true);
 
+    // Elements must stay mounted while confirmPayment runs — do NOT change
+    // parent step before this call or Stripe loses the mounted PaymentElement.
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
@@ -43,12 +47,26 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
     });
 
     if (error) {
+      setIsProcessing(false);
       onError(error.message ?? 'Payment failed');
-    } else {
-      onSuccess();
+      return;
     }
+
+    // Stripe confirmed payment — tell the backend to activate the enrollment.
+    // This is needed in local dev where webhooks aren't forwarded automatically.
+    try {
+      await analyticsApi.verifyEnrollmentPayment(courseId, paymentIntentId);
+    } catch {
+      // Non-fatal: webhook may have already created the enrollment
+    }
+
+    onSuccess();
   };
 
+  const canPay = !!(stripe && elements && paymentElementReady && !isProcessing);
+
+  // The PaymentElement iframe MUST stay mounted for the entire confirmPayment
+  // call — never conditionally unmount the form or the element.
   return (
     <form onSubmit={handlePay}>
       <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
@@ -60,16 +78,36 @@ const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
         </div>
       </div>
 
-      <PaymentElement options={{ layout: 'tabs' }} />
+      {!paymentElementReady && (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 size={22} className="animate-spin text-slate-400" />
+        </div>
+      )}
 
-      <button
-        type="submit"
-        disabled={!stripe || !elements}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800 disabled:opacity-50"
-      >
-        <Lock size={14} />
-        Pay {priceAmount.toLocaleString()} {priceCurrency}
-      </button>
+      {/* Always keep PaymentElement in the DOM — hiding it while processing
+          via CSS so the iframe stays alive for confirmPayment */}
+      <div style={{ display: isProcessing ? 'none' : 'block' }}>
+        <PaymentElement
+          options={{ layout: 'tabs' }}
+          onReady={() => setPaymentElementReady(true)}
+        />
+      </div>
+
+      {isProcessing ? (
+        <div className="mt-4 flex flex-col items-center gap-2 py-4">
+          <Loader2 size={28} className="animate-spin text-primary-900" />
+          <p className="text-sm text-slate-400">Processing payment…</p>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={!canPay}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-900 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-900/20 transition hover:bg-primary-800 disabled:opacity-50"
+        >
+          <Lock size={14} />
+          {paymentElementReady ? `Pay ${priceAmount.toLocaleString()} ${priceCurrency}` : 'Loading…'}
+        </button>
+      )}
     </form>
   );
 };
@@ -93,9 +131,7 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
 }) => {
   useAuthStore(); // keep store connected for future auth checks
 
-  const [step, setStep] = useState<'loading' | 'payment' | 'confirming' | 'success' | 'error'>(
-    'loading'
-  );
+  const [step, setStep] = useState<'loading' | 'payment' | 'success' | 'error'>('loading');
   const [checkoutData, setCheckoutData] = useState<CourseCheckoutResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -169,7 +205,7 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
                 priceAmount={priceAmount}
                 priceCurrency={priceCurrency}
                 courseId={courseId}
-                onConfirming={() => setStep('confirming')}
+                paymentIntentId={checkoutData.paymentIntentId}
                 onSuccess={() => {
                   setStep('success');
                   setTimeout(() => onEnrolled(), 1500);
@@ -180,14 +216,6 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
                 }}
               />
             </Elements>
-          )}
-
-          {/* Confirming */}
-          {step === 'confirming' && (
-            <div className="flex flex-col items-center gap-3 py-10">
-              <Loader2 size={30} className="animate-spin text-primary-900" />
-              <p className="text-sm text-slate-400">Processing payment…</p>
-            </div>
           )}
 
           {/* Success */}
@@ -218,7 +246,7 @@ const CourseCheckoutModal: React.FC<CourseCheckoutModalProps> = ({
           )}
         </div>
 
-        {step === 'payment' && (
+        {(step === 'payment') && (
           <div className="flex items-center justify-center gap-1.5 border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
             <Lock size={11} /> Secured by Stripe
           </div>

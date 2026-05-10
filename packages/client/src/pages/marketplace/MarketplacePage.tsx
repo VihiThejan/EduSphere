@@ -25,6 +25,7 @@ import {
 } from '@/components/marketplace';
 import { useAuthStore } from '@/store/authStore';
 import { marketplaceApi } from '@/services/api/marketplace.api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const LISTINGS_PER_PAGE = 6;
 
@@ -137,20 +138,23 @@ const MarketplacePage: React.FC = () => {
     { label: 'Settings', href: '#', icon: Settings },
   ];
 
-  const selectedCategory = filters.types.length === 1 ? categoryMap[filters.types[0]] : undefined;
+  const debouncedSearch = useDebounce(search, 400);
+  const debouncedFilters = useDebounce(filters, 400);
+
+  const selectedCategory = debouncedFilters.types.length === 1 ? categoryMap[debouncedFilters.types[0]] : undefined;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['marketplace-list', { page, search, sort, filters }],
+    queryKey: ['marketplace-list', { page, search: debouncedSearch, sort, filters: debouncedFilters }],
     queryFn: async () => {
       return marketplaceApi.getListings({
         page,
         limit: LISTINGS_PER_PAGE,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         category: selectedCategory,
-        minPrice: filters.minPrice,
-        maxPrice: filters.maxPrice,
-        campus: campusMap[filters.campus] || undefined,
-        condition: conditionMap[filters.condition] || undefined,
+        minPrice: debouncedFilters.minPrice,
+        maxPrice: debouncedFilters.maxPrice,
+        campus: campusMap[debouncedFilters.campus] || undefined,
+        condition: conditionMap[debouncedFilters.condition] || undefined,
       });
     },
   });
@@ -177,7 +181,7 @@ const MarketplacePage: React.FC = () => {
 
   React.useEffect(() => {
     setPage(1);
-  }, [search, filters, sort]);
+  }, [debouncedSearch, debouncedFilters, sort]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">

@@ -41,8 +41,8 @@ export const marketplaceApi = {
     return apiClient.get<MarketplaceListResponse>('/marketplace', params);
   },
 
-  getListingById: async (listingId: string): Promise<{ listing: IMarketplaceItem }> => {
-    return apiClient.get<{ listing: IMarketplaceItem }>(`/marketplace/${listingId}`);
+  getListingById: async (listingId: string): Promise<{ listing: IMarketplaceItem; sellerEmail: string | null }> => {
+    return apiClient.get<{ listing: IMarketplaceItem; sellerEmail: string | null }>(`/marketplace/${listingId}`);
   },
 
   getSellerListingsPublic: async (
