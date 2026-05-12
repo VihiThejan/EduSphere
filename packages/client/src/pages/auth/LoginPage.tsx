@@ -24,6 +24,8 @@ const LoginPage: React.FC = () => {
 
   const getRedirectPath = (roles: string[]) => {
     if (roles.includes('admin')) return '/admin/dashboard';
+    if (roles.includes('tutor')) return '/tutor/dashboard';
+    if (roles.includes('seller')) return '/seller/dashboard';
     return '/dashboard';
   };
 

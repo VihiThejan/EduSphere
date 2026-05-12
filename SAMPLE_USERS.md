@@ -67,9 +67,9 @@ Use this account to demo the full seller workflow — subscription is pre-activa
 | Role | Redirects to |
 |------|-------------|
 | admin | `/admin/dashboard` |
-| tutor (no admin) | `/dashboard` |
+| tutor | `/tutor/dashboard` |
+| seller | `/seller/dashboard` |
 | student | `/dashboard` |
-| seller | `/dashboard` |
 
 ---
 

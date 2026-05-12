@@ -80,13 +80,19 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const getRoleDashboard = (roles: string[] = []) => {
+  if (roles.includes('admin')) return '/admin/dashboard';
+  if (roles.includes('tutor')) return '/tutor/dashboard';
+  if (roles.includes('seller')) return '/seller/dashboard';
+  return '/dashboard';
+};
+
 // Public Route Component (redirect to role-specific dashboard if authenticated)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isInitialized, user } = useAuthStore();
   if (!isInitialized) return <AppLoader />;
   if (isAuthenticated) {
-    const dest = user?.roles?.includes('admin') ? '/admin/dashboard' : '/dashboard';
-    return <Navigate to={dest} replace />;
+    return <Navigate to={getRoleDashboard(user?.roles)} replace />;
   }
   return <>{children}</>;
 };

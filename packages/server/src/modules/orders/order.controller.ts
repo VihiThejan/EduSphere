@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { orderService } from './order.service.js';
 import { Cart } from '../cart/cart.model.js';
 import { MarketplaceItem } from '../marketplace/marketplace.model.js';
+import { ORDER_FULFILLMENT_STATUS } from '@edusphere/shared';
 
 type AuthRequest = Request & {
   user?: {
@@ -168,14 +169,7 @@ export class OrderController {
         return;
       }
 
-      // Validate status
-      const validStatuses = [
-        'PENDING_PAYMENT',
-        'PROCESSING',
-        'SHIPPED',
-        'DELIVERED',
-        'CANCELLED',
-      ];
+      const validStatuses = Object.values(ORDER_FULFILLMENT_STATUS);
       if (!validStatuses.includes(fulfillmentStatus)) {
         res.status(400).json({
           message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
