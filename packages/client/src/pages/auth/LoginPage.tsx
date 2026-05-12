@@ -6,6 +6,8 @@ import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { userLoginSchema, UserLoginInput } from '@edusphere/shared';
 import { authApi } from '@/services/api/auth.api';
 import { useAuthStore } from '@/store/authStore';
+import { AUTH_SESSION_HINT_KEY } from '@/store/authStore';
+import { apiClient } from '@/services/api/client';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,10 +32,17 @@ const LoginPage: React.FC = () => {
   };
 
   const onSubmit = async (data: UserLoginInput) => {
+    if (isLoading) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError('');
-      const response = await authApi.login(data);
+      const response = await authApi.login({
+        ...data,
+        email: data.email.trim().toLowerCase(),
+      });
       login(response.accessToken, response.user);
       navigate(getRedirectPath(response.user.roles));
     } catch (err: unknown) {
@@ -43,6 +52,12 @@ const LoginPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    apiClient.clearAccessToken();
+    window.localStorage.removeItem('auth-storage');
+    window.localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">

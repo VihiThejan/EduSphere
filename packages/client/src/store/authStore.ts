@@ -4,6 +4,8 @@ import { User } from '@edusphere/shared';
 import { apiClient } from '../services/api/client';
 import { authApi } from '../services/api/auth.api';
 
+export const AUTH_SESSION_HINT_KEY = 'edusphere-had-session';
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;

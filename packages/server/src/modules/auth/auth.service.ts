@@ -32,7 +32,8 @@ export interface AuthTokens {
 
 export class AuthService {
   async register(input: RegisterInput): Promise<{ user: IUser; tokens: AuthTokens }> {
-    const existingUser = await UserModel.findOne({ email: input.email });
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const existingUser = await UserModel.findOne({ email: normalizedEmail });
     if (existingUser) {
       throw new ConflictError('User with this email already exists');
     }
@@ -47,7 +48,7 @@ export class AuthService {
       .digest('hex');
 
     const user = await UserModel.create({
-      email: input.email,
+      email: normalizedEmail,
       passwordHash,
       roles: input.roles || ['student'],
       profile: {
@@ -75,7 +76,8 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<{ user: IUser; tokens: AuthTokens }> {
-    const user = await UserModel.findOne({ email: input.email }).select(
+    const normalizedEmail = input.email.trim().toLowerCase();
+    const user = await UserModel.findOne({ email: normalizedEmail }).select(
       '+passwordHash +refreshTokens +loginAttempts +lockUntil'
     );
 
